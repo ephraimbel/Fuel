@@ -203,12 +203,14 @@ final class AppState {
 
 enum Tab: String, CaseIterable {
     case home
+    case history
     case progress
     case profile
 
     var title: String {
         switch self {
         case .home: return "Home"
+        case .history: return "Meals"
         case .progress: return "Progress"
         case .profile: return "Profile"
         }
@@ -217,6 +219,7 @@ enum Tab: String, CaseIterable {
     var icon: String {
         switch self {
         case .home: return "house"
+        case .history: return "fork.knife"
         case .progress: return "chart.line.uptrend.xyaxis"
         case .profile: return "person"
         }
@@ -225,6 +228,7 @@ enum Tab: String, CaseIterable {
     var selectedIcon: String {
         switch self {
         case .home: return "house.fill"
+        case .history: return "fork.knife"
         case .progress: return "chart.line.uptrend.xyaxis"
         case .profile: return "person.fill"
         }

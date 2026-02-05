@@ -1,10 +1,12 @@
 import SwiftUI
+import SwiftData
 
 /// Manual Barcode Entry View
 /// Allows users to type a barcode number manually
 
 struct ManualBarcodeEntryView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
 
     @State private var barcodeText = ""
     @State private var isLookingUp = false
@@ -170,8 +172,8 @@ struct ManualBarcodeEntryView: View {
                 if let product = scannedProduct {
                     ScannedProductSheet(
                         product: product,
-                        onAdd: { servings in
-                            addToMeal(product: product, servings: servings)
+                        onAdd: { servings, mealType in
+                            addToMeal(product: product, servings: servings, mealType: mealType)
                         },
                         onScanAgain: {
                             showingProductSheet = false
@@ -241,9 +243,13 @@ struct ManualBarcodeEntryView: View {
         }
     }
 
-    private func addToMeal(product: ScannedProduct, servings: Double) {
+    private func addToMeal(product: ScannedProduct, servings: Double, mealType: MealType) {
+        // Create food item from scanned product
         let foodItem = product.toFoodItem(servings: servings)
-        // TODO: Add to meal via data manager
+
+        // Add to meal using MealService
+        MealService.shared.addFoodItem(foodItem, to: mealType, date: Date(), in: modelContext)
+
         FuelHaptics.shared.success()
         showingProductSheet = false
         dismiss()

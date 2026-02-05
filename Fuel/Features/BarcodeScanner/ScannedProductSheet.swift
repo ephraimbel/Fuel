@@ -5,12 +5,24 @@ import SwiftUI
 
 struct ScannedProductSheet: View {
     let product: ScannedProduct
-    let onAdd: (Double) -> Void
+    let onAdd: (Double, MealType) -> Void
     let onScanAgain: () -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var numberOfServings: Double = 1.0
+    @State private var selectedMealType: MealType = Self.defaultMealType
     @State private var showingNutritionDetails = false
+
+    /// Returns the default meal type based on current time of day
+    private static var defaultMealType: MealType {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<11: return .breakfast
+        case 11..<15: return .lunch
+        case 15..<21: return .dinner
+        default: return .snack
+        }
+    }
 
     private var adjustedCalories: Int {
         Int(Double(product.calories) * numberOfServings)
@@ -40,6 +52,9 @@ struct ScannedProductSheet: View {
 
                     // Serving size selector
                     servingSizeSection
+
+                    // Meal type selector
+                    mealTypeSection
 
                     // Nutrition summary
                     nutritionSummary
@@ -218,6 +233,37 @@ struct ScannedProductSheet: View {
         }
     }
 
+    // MARK: - Meal Type Section
+
+    private var mealTypeSection: some View {
+        VStack(alignment: .leading, spacing: FuelSpacing.sm) {
+            Text("ADD TO")
+                .font(FuelTypography.caption)
+                .foregroundStyle(FuelColors.textTertiary)
+
+            HStack(spacing: FuelSpacing.sm) {
+                ForEach(MealType.allCases, id: \.self) { mealType in
+                    Button {
+                        selectedMealType = mealType
+                        FuelHaptics.shared.select()
+                    } label: {
+                        HStack(spacing: FuelSpacing.xs) {
+                            Image(systemName: mealType.icon)
+                                .font(.system(size: 14))
+                            Text(mealType.displayName)
+                                .font(FuelTypography.caption)
+                        }
+                        .padding(.horizontal, FuelSpacing.sm)
+                        .padding(.vertical, FuelSpacing.xs)
+                        .background(selectedMealType == mealType ? FuelColors.primary : FuelColors.surfaceSecondary)
+                        .foregroundStyle(selectedMealType == mealType ? .white : FuelColors.textPrimary)
+                        .clipShape(Capsule())
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Nutrition Summary
 
     private var nutritionSummary: some View {
@@ -316,7 +362,7 @@ struct ScannedProductSheet: View {
                 // Add button
                 Button {
                     FuelHaptics.shared.success()
-                    onAdd(numberOfServings)
+                    onAdd(numberOfServings, selectedMealType)
                 } label: {
                     HStack(spacing: FuelSpacing.xs) {
                         Image(systemName: "plus")
@@ -395,7 +441,7 @@ struct NutritionGradeBadge: View {
             category: "Dairy",
             quantity: "4 x 170g"
         ),
-        onAdd: { _ in },
+        onAdd: { _, _ in },
         onScanAgain: {}
     )
 }

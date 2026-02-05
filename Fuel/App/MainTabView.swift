@@ -39,6 +39,11 @@ struct MainTabView: View {
                 DashboardView()
                     .tag(Tab.home)
 
+                NavigationStack {
+                    MealHistoryView()
+                }
+                .tag(Tab.history)
+
                 ProgressScreen()
                     .tag(Tab.progress)
 
@@ -113,38 +118,60 @@ struct MainTabView: View {
     // MARK: - Custom Tab Bar
 
     private var customTabBar: some View {
-        HStack(spacing: 0) {
-            // Tab buttons (Home, Progress, Profile)
-            ForEach(Tab.allCases, id: \.self) { tab in
-                tabButton(for: tab)
-            }
+        VStack {
+            Spacer()
 
-            // Add Button (right side)
-            Button {
-                FuelHaptics.shared.impact()
-                selectedMealType = .suggested()
-                appState.showAddMealSheet = true
-            } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 56, height: 56)
-                    .background(
-                        Circle()
-                            .fill(FuelColors.primary)
-                            .shadow(color: FuelColors.primary.opacity(0.3), radius: 8, y: 4)
-                    )
+            HStack(alignment: .bottom, spacing: 12) {
+                // Tab buttons in glass capsule
+                HStack(spacing: 0) {
+                    ForEach(Tab.allCases, id: \.self) { tab in
+                        tabButton(for: tab)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity)
+                .background(
+                    Capsule()
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            Capsule()
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [
+                                            .white.opacity(0.5),
+                                            .white.opacity(0.1),
+                                            .clear
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1
+                                )
+                        )
+                        .shadow(color: .black.opacity(0.15), radius: 24, y: 10)
+                )
+
+                // Add Button
+                Button {
+                    FuelHaptics.shared.impact()
+                    selectedMealType = .suggested()
+                    appState.showAddMealSheet = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 56, height: 56)
+                        .background(FuelColors.primary)
+                        .clipShape(Circle())
+                        .shadow(color: FuelColors.primary.opacity(0.25), radius: 12, y: 6)
+                }
+                .buttonStyle(ScaleButtonStyle())
             }
-            .buttonStyle(ScaleButtonStyle())
-            .padding(.horizontal, FuelSpacing.md)
+            .padding(.horizontal, FuelSpacing.screenHorizontal)
+            .padding(.bottom, 8)
         }
-        .padding(.top, FuelSpacing.sm)
-        .padding(.bottom, FuelSpacing.safeAreaBottom)
-        .background(
-            FuelColors.surface
-                .shadow(color: .black.opacity(0.06), radius: 12, y: -4)
-                .ignoresSafeArea(edges: .bottom)
-        )
     }
 
     private func tabButton(for tab: Tab) -> some View {
@@ -155,19 +182,15 @@ struct MainTabView: View {
             FuelHaptics.shared.select()
             appState.selectedTab = tab
         } label: {
-            VStack(spacing: FuelSpacing.xxs) {
-                Image(systemName: isSelected ? tab.selectedIcon : tab.icon)
-                    .font(.system(size: 22, weight: isSelected ? .semibold : .regular))
-                    .foregroundStyle(isSelected ? FuelColors.primary : FuelColors.textTertiary)
-                    .frame(height: 24)
-
-                Text(tab.title)
-                    .font(FuelTypography.caption)
-                    .foregroundStyle(isSelected ? FuelColors.primary : FuelColors.textTertiary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, FuelSpacing.xs)
-            .contentShape(Rectangle())
+            Image(systemName: isSelected ? tab.selectedIcon : tab.icon)
+                .font(.system(size: 22, weight: isSelected ? .semibold : .regular))
+                .foregroundStyle(isSelected ? FuelColors.primary : FuelColors.textTertiary)
+                .frame(width: 44, height: 44)
+                .background(
+                    Circle()
+                        .fill(isSelected ? FuelColors.primary.opacity(0.15) : .clear)
+                )
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .animation(.easeInOut(duration: 0.2), value: isSelected)

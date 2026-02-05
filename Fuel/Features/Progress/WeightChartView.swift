@@ -2,13 +2,16 @@ import SwiftUI
 import Charts
 
 /// Weight Chart View
-/// Line chart showing weight progress over time
+/// Interactive line chart showing weight progress with animations
 
 struct WeightChartView: View {
     let entries: [WeightDataPoint]
     let goalWeight: Double
 
     @State private var selectedEntry: WeightDataPoint?
+    @State private var lastSelectedId: UUID?
+    @State private var lineProgress: CGFloat = 0
+    @State private var hasAppeared = false
 
     private var minWeight: Double {
         guard !entries.isEmpty else { return goalWeight - 10 }
@@ -27,6 +30,15 @@ struct WeightChartView: View {
             // Chart
             chartContent
                 .frame(maxWidth: .infinity)
+                .onAppear {
+                    if !hasAppeared && !entries.isEmpty {
+                        hasAppeared = true
+                        // Animate line drawing
+                        withAnimation(.easeOut(duration: 1.2)) {
+                            lineProgress = 1.0
+                        }
+                    }
+                }
 
             // Legend
             legendView
@@ -171,14 +183,24 @@ struct WeightChartView: View {
                                     let closest = entries.min(by: {
                                         abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date))
                                     })
-                                    if closest?.id != selectedEntry?.id {
-                                        selectedEntry = closest
-                                        FuelHaptics.shared.tap()
+                                    // Only trigger haptic when selection changes
+                                    if closest?.id != lastSelectedId {
+                                        lastSelectedId = closest?.id
+                                        withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                                            selectedEntry = closest
+                                        }
+                                        // Haptic feedback - tick for each point
+                                        FuelHaptics.shared.select()
                                     }
                                 }
                             }
                             .onEnded { _ in
-                                selectedEntry = nil
+                                withAnimation(.easeOut(duration: 0.2)) {
+                                    selectedEntry = nil
+                                }
+                                lastSelectedId = nil
+                                // Light haptic on release
+                                FuelHaptics.shared.tap()
                             }
                     )
             }
@@ -187,10 +209,13 @@ struct WeightChartView: View {
             if let entry = selectedEntry {
                 tooltipView(for: entry)
                     .padding(FuelSpacing.sm)
-                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                    .animation(.easeOut(duration: 0.15), value: selectedEntry?.id)
+                    .transition(.asymmetric(
+                        insertion: .scale(scale: 0.85).combined(with: .opacity),
+                        removal: .opacity
+                    ))
             }
         }
+        .animation(.spring(response: 0.3, dampingFraction: 0.75), value: selectedEntry?.id)
     }
 
     // MARK: - Custom Chart (Fallback for iOS 15)

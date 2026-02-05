@@ -11,6 +11,8 @@ struct MealDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @State private var showingDeleteConfirmation = false
+    @State private var showingLogAgainSheet = false
+    @State private var selectedMealType: MealType?
 
     var body: some View {
         NavigationStack {
@@ -28,6 +30,9 @@ struct MealDetailView: View {
 
                         // Food items list
                         foodItemsSection
+
+                        // Log again button
+                        logAgainButton
 
                         // Delete button
                         deleteButton
@@ -66,6 +71,16 @@ struct MealDetailView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Are you sure you want to delete this meal? This action cannot be undone.")
+        }
+        .sheet(isPresented: $showingLogAgainSheet) {
+            LogAgainSheet(
+                meal: meal,
+                onLog: { mealType in
+                    logMealAgain(to: mealType)
+                }
+            )
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
         }
     }
 
@@ -398,6 +413,60 @@ struct MealDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
     }
 
+    // MARK: - Log Again Button
+
+    private var logAgainButton: some View {
+        Button {
+            FuelHaptics.shared.tap()
+            showingLogAgainSheet = true
+        } label: {
+            HStack(spacing: FuelSpacing.sm) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                Text("Log Again Today")
+                    .font(FuelTypography.headline)
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, FuelSpacing.buttonPaddingV)
+            .background(FuelColors.primary)
+            .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
+        }
+    }
+
+    // MARK: - Log Meal Again
+
+    private func logMealAgain(to mealType: MealType) {
+        guard let foodItems = meal.foodItems, !foodItems.isEmpty else { return }
+
+        // Create copies of all food items and add to today's meal
+        for item in foodItems {
+            let newFoodItem = FoodItem(
+                name: item.name,
+                servingSize: item.servingSize,
+                servingUnit: item.servingUnit,
+                numberOfServings: item.numberOfServings,
+                calories: item.caloriesPerServing,
+                protein: item.proteinPerServing,
+                carbs: item.carbsPerServing,
+                fat: item.fatPerServing,
+                source: item.source
+            )
+
+            // Copy additional nutrition data
+            newFoodItem.fiberPerServing = item.fiberPerServing
+            newFoodItem.sugarPerServing = item.sugarPerServing
+            newFoodItem.sodiumPerServing = item.sodiumPerServing
+            newFoodItem.brandName = item.brandName
+            newFoodItem.barcode = item.barcode
+
+            MealService.shared.addFoodItem(newFoodItem, to: mealType, date: Date(), in: modelContext)
+        }
+
+        FuelHaptics.shared.success()
+        dismiss()
+    }
+
     // MARK: - Delete Button
 
     private var deleteButton: some View {
@@ -437,6 +506,110 @@ struct MealDetailView: View {
 
             Spacer()
         }
+    }
+}
+
+// MARK: - Log Again Sheet
+
+struct LogAgainSheet: View {
+    let meal: Meal
+    let onLog: (MealType) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedMealType: MealType
+
+    init(meal: Meal, onLog: @escaping (MealType) -> Void) {
+        self.meal = meal
+        self.onLog = onLog
+        // Default to same meal type or time-based
+        self._selectedMealType = State(initialValue: Self.defaultMealType(from: meal))
+    }
+
+    private static func defaultMealType(from meal: Meal) -> MealType {
+        // Use the original meal type by default
+        return meal.mealType
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: FuelSpacing.lg) {
+                // Header info
+                VStack(spacing: FuelSpacing.sm) {
+                    Image(systemName: "arrow.clockwise.circle.fill")
+                        .font(.system(size: 48))
+                        .foregroundStyle(FuelColors.primary)
+
+                    Text("Log This Meal Again")
+                        .font(FuelTypography.title3)
+                        .foregroundStyle(FuelColors.textPrimary)
+
+                    Text("\(meal.foodItems?.count ?? 0) items • \(meal.totalCalories) cal")
+                        .font(FuelTypography.subheadline)
+                        .foregroundStyle(FuelColors.textSecondary)
+                }
+                .padding(.top, FuelSpacing.lg)
+
+                // Meal type selector
+                VStack(alignment: .leading, spacing: FuelSpacing.sm) {
+                    Text("ADD TO")
+                        .font(FuelTypography.caption)
+                        .foregroundStyle(FuelColors.textTertiary)
+                        .padding(.horizontal, FuelSpacing.screenHorizontal)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: FuelSpacing.sm) {
+                            ForEach(MealType.allCases, id: \.self) { mealType in
+                                mealTypeButton(mealType)
+                            }
+                        }
+                        .padding(.horizontal, FuelSpacing.screenHorizontal)
+                    }
+                }
+
+                Spacer()
+
+                // Confirm button
+                VStack(spacing: FuelSpacing.md) {
+                    FuelButton("Add to \(selectedMealType.displayName)", style: .primary) {
+                        onLog(selectedMealType)
+                    }
+
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .font(FuelTypography.body)
+                    .foregroundStyle(FuelColors.textSecondary)
+                }
+                .padding(.horizontal, FuelSpacing.screenHorizontal)
+                .padding(.bottom, FuelSpacing.lg)
+            }
+            .background(FuelColors.background)
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    private func mealTypeButton(_ mealType: MealType) -> some View {
+        Button {
+            selectedMealType = mealType
+            FuelHaptics.shared.select()
+        } label: {
+            VStack(spacing: FuelSpacing.sm) {
+                ZStack {
+                    Circle()
+                        .fill(selectedMealType == mealType ? FuelColors.primary : FuelColors.surfaceSecondary)
+                        .frame(width: 56, height: 56)
+
+                    Image(systemName: mealType.icon)
+                        .font(.system(size: 22))
+                        .foregroundStyle(selectedMealType == mealType ? .white : FuelColors.textSecondary)
+                }
+
+                Text(mealType.displayName)
+                    .font(FuelTypography.caption)
+                    .foregroundStyle(selectedMealType == mealType ? FuelColors.primary : FuelColors.textSecondary)
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 

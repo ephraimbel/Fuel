@@ -24,6 +24,14 @@
 		UI002 /* FuelTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC021; };
 		UI003 /* FuelSpacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC022; };
 		UI004 /* FuelAnimations.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC023; };
+		B4D10D5C50E04832871B5E97 /* VisualEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = E65DD301E9974BB5B157D25E /* VisualEffects.swift */; };
+		97F8641362B84E44845402B3 /* ParallaxEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = F278A6ED2CE948CBB9A2FBAC /* ParallaxEffects.swift */; };
+		113D38ECA5A7460C81015C28 /* AchievementCelebration.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD38BEBF9FD04EB1B926103D /* AchievementCelebration.swift */; };
+		9D5F226A2CC440DCB07FF012 /* CustomRefreshControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9EC9587DE2B4278A63C8743 /* CustomRefreshControl.swift */; };
+		FF4522D29A1E48939C20B4EF /* AnimatedIcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AFF074C39F04C20BC591CD2 /* AnimatedIcons.swift */; };
+		6CC49E185B2D4CC98A1ECC83 /* StaggeredAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2E49F8B95E9402AB75FB579 /* StaggeredAnimation.swift */; };
+		9478BD6F7F5F42129E7FBE89 /* AnimatedProgressRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB4339A7EAE415F98F113C1 /* AnimatedProgressRing.swift */; };
+		BF8C88FDCB444E699DCBAF7E /* AnimatedNumber.swift in Sources */ = {isa = PBXBuildFile; fileRef = D68F04ABB46E4D7DBBEE878D /* AnimatedNumber.swift */; };
 		UI005 /* FuelHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC024; };
 		
 		/* UI Components */
@@ -160,6 +168,14 @@
 		SRC021 /* FuelTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelTypography.swift; sourceTree = "<group>"; };
 		SRC022 /* FuelSpacing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelSpacing.swift; sourceTree = "<group>"; };
 		SRC023 /* FuelAnimations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelAnimations.swift; sourceTree = "<group>"; };
+		E65DD301E9974BB5B157D25E /* VisualEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffects.swift; sourceTree = "<group>"; };
+		F278A6ED2CE948CBB9A2FBAC /* ParallaxEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParallaxEffects.swift; sourceTree = "<group>"; };
+		AD38BEBF9FD04EB1B926103D /* AchievementCelebration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AchievementCelebration.swift; sourceTree = "<group>"; };
+		F9EC9587DE2B4278A63C8743 /* CustomRefreshControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomRefreshControl.swift; sourceTree = "<group>"; };
+		5AFF074C39F04C20BC591CD2 /* AnimatedIcons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedIcons.swift; sourceTree = "<group>"; };
+		F2E49F8B95E9402AB75FB579 /* StaggeredAnimation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StaggeredAnimation.swift; sourceTree = "<group>"; };
+		DBB4339A7EAE415F98F113C1 /* AnimatedProgressRing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedProgressRing.swift; sourceTree = "<group>"; };
+		D68F04ABB46E4D7DBBEE878D /* AnimatedNumber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedNumber.swift; sourceTree = "<group>"; };
 		SRC024 /* FuelHaptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelHaptics.swift; sourceTree = "<group>"; };
 		
 		/* UI Components */
@@ -379,6 +395,14 @@
 			isa = PBXGroup;
 			children = (
 				SRC023 /* FuelAnimations.swift */,
+				E65DD301E9974BB5B157D25E /* VisualEffects.swift */,
+				F278A6ED2CE948CBB9A2FBAC /* ParallaxEffects.swift */,
+				AD38BEBF9FD04EB1B926103D /* AchievementCelebration.swift */,
+				F9EC9587DE2B4278A63C8743 /* CustomRefreshControl.swift */,
+				5AFF074C39F04C20BC591CD2 /* AnimatedIcons.swift */,
+				F2E49F8B95E9402AB75FB579 /* StaggeredAnimation.swift */,
+				DBB4339A7EAE415F98F113C1 /* AnimatedProgressRing.swift */,
+				D68F04ABB46E4D7DBBEE878D /* AnimatedNumber.swift */,
 			);
 			path = Animations;
 			sourceTree = "<group>";
@@ -773,6 +797,14 @@
 				UI002 /* FuelTypography.swift in Sources */,
 				UI003 /* FuelSpacing.swift in Sources */,
 				UI004 /* FuelAnimations.swift in Sources */,
+				B4D10D5C50E04832871B5E97 /* VisualEffects.swift in Sources */,
+				97F8641362B84E44845402B3 /* ParallaxEffects.swift in Sources */,
+				113D38ECA5A7460C81015C28 /* AchievementCelebration.swift in Sources */,
+				9D5F226A2CC440DCB07FF012 /* CustomRefreshControl.swift in Sources */,
+				FF4522D29A1E48939C20B4EF /* AnimatedIcons.swift in Sources */,
+				6CC49E185B2D4CC98A1ECC83 /* StaggeredAnimation.swift in Sources */,
+				9478BD6F7F5F42129E7FBE89 /* AnimatedProgressRing.swift in Sources */,
+				BF8C88FDCB444E699DCBAF7E /* AnimatedNumber.swift in Sources */,
 				UI005 /* FuelHaptics.swift in Sources */,
 				UC001 /* FuelButton.swift in Sources */,
 				UC002 /* FuelCard.swift in Sources */,

@@ -122,6 +122,31 @@ final class ProgressViewModel {
         loadData()
     }
 
+    // MARK: - Log Weight
+
+    func logWeight(_ weight: Double, in context: ModelContext) {
+        // Create new weight entry
+        let entry = WeightEntry(weightKg: weight, recordedAt: Date())
+        context.insert(entry)
+
+        // Update user's current weight
+        let descriptor = FetchDescriptor<User>()
+        if let user = try? context.fetch(descriptor).first {
+            user.currentWeightKg = weight
+        }
+
+        // Save context
+        try? context.save()
+
+        // Update local state
+        currentWeight = weight
+
+        // Reload data to refresh charts
+        loadData()
+
+        FuelHaptics.shared.success()
+    }
+
     // MARK: - Load User Goals
 
     private func loadUserGoals(from context: ModelContext) {

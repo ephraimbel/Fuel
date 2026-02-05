@@ -6,7 +6,6 @@ import SwiftData
 
 struct MealHistoryView: View {
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
     @State private var viewModel = MealHistoryViewModel()
     @State private var selectedMeal: Meal?
     @State private var showingMealDetail = false
@@ -33,12 +32,12 @@ struct MealHistoryView: View {
                 }
             }
             .padding(.horizontal, FuelSpacing.screenHorizontal)
-            .padding(.bottom, FuelSpacing.screenBottom)
+            .padding(.bottom, FuelSpacing.screenBottom + 80)
         }
         .scrollIndicators(.hidden)
         .background(FuelColors.background)
-        .navigationTitle("Meal History")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationTitle("Meals")
+        .navigationBarTitleDisplayMode(.inline)
         .refreshable {
             viewModel.refresh()
         }

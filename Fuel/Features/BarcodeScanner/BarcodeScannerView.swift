@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import AVFoundation
 
 /// Barcode Scanner View
@@ -6,6 +7,7 @@ import AVFoundation
 
 struct BarcodeScannerView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
 
     @State private var viewModel = BarcodeScannerViewModel()
     @State private var scannedProduct: ScannedProduct?
@@ -45,8 +47,8 @@ struct BarcodeScannerView: View {
             if let product = scannedProduct {
                 ScannedProductSheet(
                     product: product,
-                    onAdd: { servings in
-                        addToMeal(product: product, servings: servings)
+                    onAdd: { servings, mealType in
+                        addToMeal(product: product, servings: servings, mealType: mealType)
                     },
                     onScanAgain: {
                         showingProductSheet = false
@@ -366,10 +368,13 @@ struct BarcodeScannerView: View {
         lookupError = nil
     }
 
-    private func addToMeal(product: ScannedProduct, servings: Double) {
-        // Create food item and add to current meal
+    private func addToMeal(product: ScannedProduct, servings: Double, mealType: MealType) {
+        // Create food item from scanned product
         let foodItem = product.toFoodItem(servings: servings)
-        // TODO: Add to meal via data manager
+
+        // Add to meal using MealService
+        MealService.shared.addFoodItem(foodItem, to: mealType, date: Date(), in: modelContext)
+
         FuelHaptics.shared.success()
         showingProductSheet = false
         dismiss()

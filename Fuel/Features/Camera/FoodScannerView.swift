@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import PhotosUI
 
 /// Food Scanner View
@@ -6,6 +7,7 @@ import PhotosUI
 
 struct FoodScannerView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @Environment(AppState.self) private var appState
 
     @State private var selectedTab = 0
@@ -85,7 +87,11 @@ struct FoodScannerView: View {
             if let product = scannedProduct {
                 ScannedProductSheet(
                     product: product,
-                    onAdd: { _ in
+                    onAdd: { servings, mealType in
+                        // Create food item and add to meal
+                        let foodItem = product.toFoodItem(servings: servings)
+                        MealService.shared.addFoodItem(foodItem, to: mealType, date: Date(), in: modelContext)
+                        FuelHaptics.shared.success()
                         showingProductSheet = false
                         dismiss()
                     },
