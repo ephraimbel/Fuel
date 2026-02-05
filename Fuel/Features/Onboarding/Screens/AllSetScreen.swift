@@ -1,9 +1,11 @@
 import SwiftUI
+import SwiftData
 
 /// All Set Screen
 /// Final celebration screen before entering the main app
 
 struct AllSetScreen: View {
+    @Environment(\.modelContext) private var modelContext
     @Bindable var viewModel: OnboardingViewModel
 
     @State private var showCheckmark = false
@@ -89,7 +91,7 @@ struct AllSetScreen: View {
                 // Start button
                 VStack(spacing: FuelSpacing.md) {
                     FuelButton("Start Tracking", icon: "arrow.right", iconPosition: .trailing) {
-                        viewModel.saveOnboardingData()
+                        viewModel.saveOnboardingData(to: modelContext)
                         viewModel.completeOnboarding()
                     }
 

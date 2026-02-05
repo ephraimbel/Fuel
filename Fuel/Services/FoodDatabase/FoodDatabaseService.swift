@@ -74,27 +74,188 @@ public final class FoodDatabaseService {
         return product
     }
 
-    /// Search products by name
+    /// Search products by name - searches USDA for generic foods and Open Food Facts for branded products
     public func searchProducts(query: String, page: Int = 1) async throws -> [ScannedProduct] {
         isLoading = true
         lastError = nil
 
         defer { isLoading = false }
 
+        let searchTerm = query.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Search both APIs concurrently
+        async let usdaResults = searchUSDA(query: query, page: page)
+        async let offResults = searchOpenFoodFacts(query: query, page: page)
+
+        // Combine results - USDA first (generic foods), then Open Food Facts (branded)
+        var combined: [ScannedProduct] = []
+
+        if let usda = try? await usdaResults {
+            combined.append(contentsOf: usda)
+        }
+
+        if let off = try? await offResults {
+            combined.append(contentsOf: off)
+        }
+
+        // Remove duplicates by name similarity
+        var seen = Set<String>()
+        combined = combined.filter { product in
+            let key = product.name.lowercased()
+            if seen.contains(key) { return false }
+            seen.insert(key)
+            return true
+        }
+
+        // Sort by relevance - prioritize exact matches and names starting with search term
+        combined.sort { a, b in
+            let aName = a.name.lowercased()
+            let bName = b.name.lowercased()
+
+            // Exact match gets highest priority
+            let aExact = aName == searchTerm
+            let bExact = bName == searchTerm
+            if aExact && !bExact { return true }
+            if bExact && !aExact { return false }
+
+            // Starts with search term gets next priority
+            let aStarts = aName.hasPrefix(searchTerm)
+            let bStarts = bName.hasPrefix(searchTerm)
+            if aStarts && !bStarts { return true }
+            if bStarts && !aStarts { return false }
+
+            // First word matches search term
+            let aFirstWord = aName.components(separatedBy: CharacterSet.alphanumerics.inverted).first ?? ""
+            let bFirstWord = bName.components(separatedBy: CharacterSet.alphanumerics.inverted).first ?? ""
+            let aFirstMatch = aFirstWord == searchTerm || aFirstWord.hasPrefix(searchTerm)
+            let bFirstMatch = bFirstWord == searchTerm || bFirstWord.hasPrefix(searchTerm)
+            if aFirstMatch && !bFirstMatch { return true }
+            if bFirstMatch && !aFirstMatch { return false }
+
+            // Shorter names (simpler foods) before longer names
+            return aName.count < bName.count
+        }
+
+        return combined
+    }
+
+    // MARK: - USDA FoodData Central Search
+
+    private func searchUSDA(query: String, page: Int) async throws -> [ScannedProduct] {
+        let apiKey = Secrets.usdaAPIKey
+        guard !apiKey.isEmpty else { return [] }
+
         let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
-        guard let url = URL(string: "\(baseURL)/search?search_terms=\(encodedQuery)&page=\(page)&page_size=20&json=1") else {
-            throw FoodDatabaseError.invalidQuery
+        let pageSize = 15
+        let offset = (page - 1) * pageSize
+
+        guard let url = URL(string: "https://api.nal.usda.gov/fdc/v1/foods/search?api_key=\(apiKey)&query=\(encodedQuery)&pageSize=\(pageSize)&pageNumber=\(page)&dataType=Foundation,SR%20Legacy") else {
+            return []
         }
 
         var request = URLRequest(url: url)
-        request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
-        request.timeoutInterval = 15
+        request.timeoutInterval = 10
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200 else {
-            throw FoodDatabaseError.invalidResponse
+            return []
+        }
+
+        return try parseUSDAResponse(data)
+    }
+
+    private func parseUSDAResponse(_ data: Data) throws -> [ScannedProduct] {
+        struct USDAResponse: Decodable {
+            let foods: [USDAFood]
+        }
+
+        struct USDAFood: Decodable {
+            let fdcId: Int
+            let description: String
+            let brandName: String?
+            let brandOwner: String?
+            let foodNutrients: [USDANutrient]
+            let servingSize: Double?
+            let servingSizeUnit: String?
+        }
+
+        struct USDANutrient: Decodable {
+            let nutrientId: Int
+            let nutrientName: String?
+            let value: Double?
+            let unitName: String?
+        }
+
+        let decoded = try JSONDecoder().decode(USDAResponse.self, from: data)
+
+        return decoded.foods.compactMap { food in
+            // Extract nutrients
+            var calories = 0
+            var protein = 0.0
+            var carbs = 0.0
+            var fat = 0.0
+            var fiber: Double?
+            var sugar: Double?
+
+            for nutrient in food.foodNutrients {
+                switch nutrient.nutrientId {
+                case 1008: calories = Int(nutrient.value ?? 0) // Energy (kcal)
+                case 1003: protein = nutrient.value ?? 0 // Protein
+                case 1005: carbs = nutrient.value ?? 0 // Carbohydrates
+                case 1004: fat = nutrient.value ?? 0 // Fat
+                case 1079: fiber = nutrient.value // Fiber
+                case 2000: sugar = nutrient.value // Sugars
+                default: break
+                }
+            }
+
+            // Format name nicely
+            let name = food.description.capitalized
+                .replacingOccurrences(of: ", Raw", with: "")
+                .replacingOccurrences(of: ", Nfs", with: "")
+                .trimmingCharacters(in: .whitespaces)
+
+            return ScannedProduct(
+                barcode: "usda-\(food.fdcId)",
+                name: name,
+                brand: food.brandName ?? food.brandOwner,
+                imageURL: nil,
+                servingSize: food.servingSize ?? 100,
+                servingUnit: food.servingSizeUnit ?? "g",
+                servingSizeDescription: nil,
+                calories: calories,
+                protein: protein,
+                carbs: carbs,
+                fat: fat,
+                fiber: fiber ?? 0,
+                sugar: sugar ?? 0,
+                sodium: 0,
+                nutritionGrade: nil,
+                category: nil,
+                quantity: nil
+            )
+        }
+    }
+
+    // MARK: - Open Food Facts Search
+
+    private func searchOpenFoodFacts(query: String, page: Int) async throws -> [ScannedProduct] {
+        let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
+        guard let url = URL(string: "\(baseURL)/search?search_terms=\(encodedQuery)&page=\(page)&page_size=10&json=1") else {
+            return []
+        }
+
+        var request = URLRequest(url: url)
+        request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+        request.timeoutInterval = 10
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            return []
         }
 
         return try parseSearchResponse(data)

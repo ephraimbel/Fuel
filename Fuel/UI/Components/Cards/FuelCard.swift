@@ -120,122 +120,6 @@ public struct SelectionCard: View {
     }
 }
 
-// MARK: - Meal Card
-
-/// Card for displaying logged meals
-public struct MealCard: View {
-    let mealType: String
-    let mealIcon: String
-    let calories: Int
-    let items: [String]
-    let time: Date
-    let imageURL: String?
-    let onTap: () -> Void
-    let onAdd: () -> Void
-
-    public init(
-        mealType: String,
-        mealIcon: String,
-        calories: Int,
-        items: [String],
-        time: Date,
-        imageURL: String? = nil,
-        onTap: @escaping () -> Void,
-        onAdd: @escaping () -> Void
-    ) {
-        self.mealType = mealType
-        self.mealIcon = mealIcon
-        self.calories = calories
-        self.items = items
-        self.time = time
-        self.imageURL = imageURL
-        self.onTap = onTap
-        self.onAdd = onAdd
-    }
-
-    public var body: some View {
-        FuelCard {
-            VStack(alignment: .leading, spacing: FuelSpacing.sm) {
-                // Header
-                HStack {
-                    Image(systemName: mealIcon)
-                        .font(.system(size: 16))
-                        .foregroundStyle(FuelColors.primary)
-
-                    Text(mealType)
-                        .font(FuelTypography.headline)
-                        .foregroundStyle(FuelColors.textPrimary)
-
-                    Spacer()
-
-                    if calories > 0 {
-                        Text("\(calories) cal")
-                            .font(FuelTypography.subheadline)
-                            .foregroundStyle(FuelColors.textSecondary)
-                    }
-
-                    Button {
-                        FuelHaptics.shared.tap()
-                        onAdd()
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundStyle(FuelColors.primary)
-                    }
-                }
-
-                // Content
-                if items.isEmpty {
-                    Text("Tap + to add \(mealType.lowercased())")
-                        .font(FuelTypography.subheadline)
-                        .foregroundStyle(FuelColors.textTertiary)
-                        .padding(.vertical, FuelSpacing.sm)
-                } else {
-                    Button {
-                        FuelHaptics.shared.tap()
-                        onTap()
-                    } label: {
-                        HStack(spacing: FuelSpacing.sm) {
-                            // Thumbnail
-                            if let imageURL {
-                                AsyncImage(url: URL(string: imageURL)) { image in
-                                    image
-                                        .resizable()
-                                        .scaledToFill()
-                                } placeholder: {
-                                    Rectangle()
-                                        .fill(FuelColors.surfaceSecondary)
-                                }
-                                .frame(width: 48, height: 48)
-                                .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusSm, style: .continuous))
-                            }
-
-                            // Items
-                            VStack(alignment: .leading, spacing: FuelSpacing.xxs) {
-                                Text(items.joined(separator: ", "))
-                                    .font(FuelTypography.subheadline)
-                                    .foregroundStyle(FuelColors.textPrimary)
-                                    .lineLimit(1)
-
-                                Text(time, style: .time)
-                                    .font(FuelTypography.caption)
-                                    .foregroundStyle(FuelColors.textTertiary)
-                            }
-
-                            Spacer()
-
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(FuelColors.textTertiary)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-}
-
 // MARK: - Achievement Card
 
 /// Card for displaying achievements and milestones
@@ -339,13 +223,11 @@ public struct AchievementCard: View {
             ) {}
 
             MealCard(
-                mealType: "Breakfast",
-                mealIcon: "sun.rise",
-                calories: 450,
-                items: ["Oatmeal", "Banana", "Coffee"],
-                time: Date(),
-                onTap: {},
-                onAdd: {}
+                mealType: .breakfast,
+                items: [],
+                totalCalories: 0,
+                onAddFood: {},
+                onDeleteItem: { _ in }
             )
 
             AchievementCard(

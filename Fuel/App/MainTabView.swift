@@ -3,42 +3,110 @@ import SwiftUI
 /// Main Tab View
 /// Primary navigation container with custom tab bar
 
+enum FullScreenDestination: Identifiable {
+    case foodScanner
+    case createFood
+
+    var id: String {
+        switch self {
+        case .foodScanner: return "foodScanner"
+        case .createFood: return "createFood"
+        }
+    }
+}
+
 struct MainTabView: View {
     @Environment(AppState.self) private var appState
-    @State private var showAddSheet = false
+    @Environment(\.modelContext) private var modelContext
+
+    @State private var fullScreenDestination: FullScreenDestination?
+    @State private var showQuickAdd = false
+    @State private var selectedMealType: MealType = .suggested()
+
+    private var showAddSheet: Binding<Bool> {
+        Binding(
+            get: { appState.showAddMealSheet },
+            set: { appState.showAddMealSheet = $0 }
+        )
+    }
 
     var body: some View {
         @Bindable var state = appState
 
         ZStack(alignment: .bottom) {
-            // Tab content
+            // Tab content with smooth page transitions
             TabView(selection: $state.selectedTab) {
                 DashboardView()
                     .tag(Tab.home)
 
-                FoodSearchView()
-                    .tag(Tab.search)
-
-                // Placeholder for add tab (handled by FAB)
-                Color.clear
-                    .tag(Tab.add)
-
-                ProgressTabView()
+                ProgressScreen()
                     .tag(Tab.progress)
 
-                ProfileView()
+                SettingsView()
                     .tag(Tab.profile)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
+            .animation(.easeInOut(duration: 0.3), value: state.selectedTab)
 
             // Custom tab bar
             customTabBar
         }
         .ignoresSafeArea(.keyboard)
-        .sheet(isPresented: $showAddSheet) {
-            AddMealSheet()
-                .presentationDetents([.medium, .large])
-                .presentationCornerRadius(FuelSpacing.radiusXxl)
+        .sheet(isPresented: showAddSheet) {
+            AddMealSheet(
+                onScanMeal: {
+                    appState.showAddMealSheet = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        fullScreenDestination = .foodScanner
+                    }
+                },
+                onQuickAdd: {
+                    appState.showAddMealSheet = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showQuickAdd = true
+                    }
+                },
+                onCreateFood: {
+                    appState.showAddMealSheet = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        fullScreenDestination = .createFood
+                    }
+                }
+            )
+            .presentationDetents([.height(280)])
+            .presentationCornerRadius(FuelSpacing.radiusXxl)
+        }
+        .fullScreenCover(item: $fullScreenDestination) { destination in
+            switch destination {
+            case .foodScanner:
+                FoodScannerView()
+                    .environment(appState)
+            case .createFood:
+                NavigationStack {
+                    CreateCustomFoodView(mealType: selectedMealType) { foodItem in
+                        MealService.shared.addFoodItem(
+                            foodItem,
+                            to: selectedMealType,
+                            date: Date(),
+                            in: modelContext
+                        )
+                        FuelHaptics.shared.success()
+                        fullScreenDestination = nil
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showQuickAdd) {
+            QuickAddView(mealType: selectedMealType) { foodItem in
+                MealService.shared.addFoodItem(
+                    foodItem,
+                    to: selectedMealType,
+                    date: Date(),
+                    in: modelContext
+                )
+                FuelHaptics.shared.success()
+            }
+            .presentationDetents([.medium, .large])
         }
     }
 
@@ -46,37 +114,36 @@ struct MainTabView: View {
 
     private var customTabBar: some View {
         HStack(spacing: 0) {
-            tabButton(for: .home)
-            tabButton(for: .search)
+            // Tab buttons (Home, Progress, Profile)
+            ForEach(Tab.allCases, id: \.self) { tab in
+                tabButton(for: tab)
+            }
 
-            // Center FAB
+            // Add Button (right side)
             Button {
                 FuelHaptics.shared.impact()
-                showAddSheet = true
+                selectedMealType = .suggested()
+                appState.showAddMealSheet = true
             } label: {
-                ZStack {
-                    Circle()
-                        .fill(FuelColors.primaryGradient)
-                        .frame(width: 56, height: 56)
-                        .shadow(color: FuelColors.primary.opacity(0.4), radius: 12, y: 6)
-
-                    Image(systemName: "plus")
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
+                Image(systemName: "plus")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 56, height: 56)
+                    .background(
+                        Circle()
+                            .fill(FuelColors.primary)
+                            .shadow(color: FuelColors.primary.opacity(0.3), radius: 8, y: 4)
+                    )
             }
-            .offset(y: -20)
-
-            tabButton(for: .progress)
-            tabButton(for: .profile)
+            .buttonStyle(ScaleButtonStyle())
+            .padding(.horizontal, FuelSpacing.md)
         }
-        .padding(.horizontal, FuelSpacing.sm)
         .padding(.top, FuelSpacing.sm)
         .padding(.bottom, FuelSpacing.safeAreaBottom)
         .background(
             FuelColors.surface
-                .shadow(color: .black.opacity(0.08), radius: 8, y: -4)
-                .ignoresSafeArea(.all, edges: .bottom)
+                .shadow(color: .black.opacity(0.06), radius: 12, y: -4)
+                .ignoresSafeArea(edges: .bottom)
         )
     }
 
@@ -86,9 +153,7 @@ struct MainTabView: View {
         return Button {
             guard !isSelected else { return }
             FuelHaptics.shared.select()
-            withAnimation(FuelAnimations.spring) {
-                appState.selectedTab = tab
-            }
+            appState.selectedTab = tab
         } label: {
             VStack(spacing: FuelSpacing.xxs) {
                 Image(systemName: isSelected ? tab.selectedIcon : tab.icon)
@@ -101,277 +166,21 @@ struct MainTabView: View {
                     .foregroundStyle(isSelected ? FuelColors.primary : FuelColors.textTertiary)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, FuelSpacing.xxs)
+            .padding(.vertical, FuelSpacing.xs)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
     }
 }
 
-// MARK: - Dashboard View
+// MARK: - Scale Button Style
 
-struct DashboardView: View {
-    @Environment(AppState.self) private var appState
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: FuelSpacing.lg) {
-                    // Header
-                    FuelLargeTitleBar(title: "Today", subtitle: formattedDate) {
-                        FuelIconButton(icon: "bell") {
-                            // Notifications
-                        }
-                    }
-
-                    // Calorie ring
-                    CalorieRing(
-                        consumed: appState.dailyCaloriesConsumed,
-                        target: appState.dailyCalorieTarget
-                    )
-                    .padding(.vertical, FuelSpacing.md)
-
-                    // Macro summary
-                    MacroSummary(
-                        protein: (appState.dailyProtein, 150),
-                        carbs: (appState.dailyCarbs, 250),
-                        fat: (appState.dailyFat, 65),
-                        layout: .horizontal
-                    )
-                    .padding(.horizontal, FuelSpacing.screenHorizontal)
-                    .padding(.vertical, FuelSpacing.md)
-                    .background(FuelColors.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusLg))
-                    .padding(.horizontal, FuelSpacing.screenHorizontal)
-
-                    // Meal cards
-                    VStack(spacing: FuelSpacing.cardSpacing) {
-                        ForEach(MealType.allCases, id: \.self) { mealType in
-                            MealCard(
-                                mealType: mealType.displayName,
-                                mealIcon: mealType.icon,
-                                calories: 0,
-                                items: [],
-                                time: Date(),
-                                onTap: {},
-                                onAdd: {
-                                    appState.showCamera = true
-                                }
-                            )
-                        }
-                    }
-                    .padding(.horizontal, FuelSpacing.screenHorizontal)
-
-                    // Spacer for tab bar
-                    Spacer()
-                        .frame(height: 100)
-                }
-            }
-            .background(FuelColors.background)
-        }
-    }
-
-    private var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMM d"
-        return formatter.string(from: Date())
-    }
-}
-
-// MARK: - Placeholder Tab Views
-
-struct FoodSearchView: View {
-    @State private var searchText = ""
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: FuelSpacing.lg) {
-                FuelSearchBar(text: $searchText)
-                    .padding(.horizontal, FuelSpacing.screenHorizontal)
-                    .padding(.top, FuelSpacing.md)
-
-                if searchText.isEmpty {
-                    EmptyState.noSearchResults(query: "")
-                } else {
-                    // Search results would go here
-                    EmptyState.noSearchResults(query: searchText)
-                }
-
-                Spacer()
-            }
-            .background(FuelColors.background)
-            .navigationTitle("Search")
-            .navigationBarTitleDisplayMode(.inline)
-        }
-    }
-}
-
-struct ProgressTabView: View {
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: FuelSpacing.lg) {
-                    FuelLargeTitleBar(title: "Progress") {
-                        FuelSegmentedControl(
-                            options: ["Week", "Month", "Year"],
-                            selectedIndex: .constant(0)
-                        )
-                        .frame(width: 180)
-                    }
-
-                    // Weight chart placeholder
-                    FuelCard {
-                        VStack(alignment: .leading, spacing: FuelSpacing.md) {
-                            Text("Weight Trend")
-                                .font(FuelTypography.headline)
-                                .foregroundStyle(FuelColors.textPrimary)
-
-                            Text("Chart coming soon")
-                                .font(FuelTypography.body)
-                                .foregroundStyle(FuelColors.textSecondary)
-                                .frame(height: 200)
-                                .frame(maxWidth: .infinity)
-                        }
-                    }
-                    .padding(.horizontal, FuelSpacing.screenHorizontal)
-
-                    // Weekly rings
-                    FuelCard {
-                        VStack(alignment: .leading, spacing: FuelSpacing.md) {
-                            Text("This Week")
-                                .font(FuelTypography.headline)
-                                .foregroundStyle(FuelColors.textPrimary)
-
-                            WeeklyCalorieRings(dailyData: [
-                                (1800, 2000), (2100, 2000), (1950, 2000), (0, 2000),
-                                (0, 2000), (0, 2000), (0, 2000)
-                            ])
-                        }
-                    }
-                    .padding(.horizontal, FuelSpacing.screenHorizontal)
-
-                    Spacer()
-                        .frame(height: 100)
-                }
-            }
-            .background(FuelColors.background)
-        }
-    }
-}
-
-struct ProfileView: View {
-    @Environment(AppState.self) private var appState
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: FuelSpacing.lg) {
-                    // Profile header
-                    VStack(spacing: FuelSpacing.md) {
-                        Circle()
-                            .fill(FuelColors.primaryLight)
-                            .frame(width: 80, height: 80)
-                            .overlay(
-                                Text("U")
-                                    .font(FuelTypography.title1)
-                                    .foregroundStyle(FuelColors.primary)
-                            )
-
-                        Text("User")
-                            .font(FuelTypography.title2)
-                            .foregroundStyle(FuelColors.textPrimary)
-
-                        if !appState.isPremium {
-                            Button {
-                                appState.showPaywall = true
-                            } label: {
-                                HStack(spacing: FuelSpacing.xs) {
-                                    Image(systemName: "crown.fill")
-                                    Text("Upgrade to Premium")
-                                }
-                                .font(FuelTypography.subheadlineMedium)
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, FuelSpacing.md)
-                                .padding(.vertical, FuelSpacing.sm)
-                                .background(FuelColors.primaryGradient)
-                                .clipShape(Capsule())
-                            }
-                        }
-                    }
-                    .padding(.vertical, FuelSpacing.xl)
-
-                    // Settings sections
-                    settingsSection(title: "Account", items: [
-                        ("person.fill", "Personal Info"),
-                        ("target", "Goals"),
-                        ("bell.fill", "Notifications")
-                    ])
-
-                    settingsSection(title: "App", items: [
-                        ("paintbrush.fill", "Appearance"),
-                        ("hand.raised.fill", "Privacy"),
-                        ("questionmark.circle.fill", "Help & Support")
-                    ])
-
-                    // Sign out
-                    FuelButton("Sign Out", style: .tertiary) {
-                        AuthService.shared.signOut()
-                    }
-                    .padding(.horizontal, FuelSpacing.screenHorizontal)
-
-                    // Version
-                    Text("Version 1.0.0")
-                        .font(FuelTypography.caption)
-                        .foregroundStyle(FuelColors.textTertiary)
-
-                    Spacer()
-                        .frame(height: 100)
-                }
-            }
-            .background(FuelColors.background)
-            .navigationTitle("Profile")
-            .navigationBarTitleDisplayMode(.inline)
-        }
-    }
-
-    private func settingsSection(title: String, items: [(String, String)]) -> some View {
-        VStack(alignment: .leading, spacing: FuelSpacing.sm) {
-            Text(title)
-                .font(FuelTypography.caption)
-                .foregroundStyle(FuelColors.textTertiary)
-                .textCase(.uppercase)
-                .padding(.horizontal, FuelSpacing.screenHorizontal)
-
-            VStack(spacing: 0) {
-                ForEach(items, id: \.1) { icon, title in
-                    HStack(spacing: FuelSpacing.md) {
-                        Image(systemName: icon)
-                            .font(.system(size: 18))
-                            .foregroundStyle(FuelColors.textSecondary)
-                            .frame(width: 28)
-
-                        Text(title)
-                            .font(FuelTypography.body)
-                            .foregroundStyle(FuelColors.textPrimary)
-
-                        Spacer()
-
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(FuelColors.textTertiary)
-                    }
-                    .padding(.horizontal, FuelSpacing.md)
-                    .padding(.vertical, FuelSpacing.sm)
-
-                    if items.last?.1 != title {
-                        Divider()
-                            .padding(.leading, FuelSpacing.md + 28 + FuelSpacing.md)
-                    }
-                }
-            }
-            .background(FuelColors.surface)
-            .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
-            .padding(.horizontal, FuelSpacing.screenHorizontal)
-        }
+private struct ScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.94 : 1.0)
+            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 
@@ -379,73 +188,65 @@ struct ProfileView: View {
 
 struct AddMealSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(AppState.self) private var appState
+
+    let onScanMeal: () -> Void
+    let onQuickAdd: () -> Void
+    let onCreateFood: () -> Void
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: FuelSpacing.xl) {
-                // Options
-                VStack(spacing: FuelSpacing.md) {
-                    addOption(
-                        icon: "camera.viewfinder",
-                        title: "Scan with AI",
-                        subtitle: "Take a photo of your meal"
-                    ) {
-                        dismiss()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            appState.showCamera = true
-                        }
-                    }
+        VStack(spacing: 0) {
+            // Handle
+            Capsule()
+                .fill(Color(.systemGray4))
+                .frame(width: 36, height: 5)
+                .padding(.top, FuelSpacing.sm)
+                .padding(.bottom, FuelSpacing.xl)
 
-                    addOption(
-                        icon: "barcode.viewfinder",
-                        title: "Scan Barcode",
-                        subtitle: "Scan packaged food"
-                    ) {
-                        // Barcode scanner
-                    }
+            // Title
+            Text("Log Food")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(FuelColors.textPrimary)
+                .padding(.bottom, FuelSpacing.xl)
 
-                    addOption(
-                        icon: "magnifyingglass",
-                        title: "Search Food",
-                        subtitle: "Search our database"
-                    ) {
-                        dismiss()
-                        appState.selectedTab = .search
-                    }
+            // Options
+            VStack(spacing: FuelSpacing.sm) {
+                // Primary action - Scan Meal
+                primaryOption(
+                    icon: "camera.viewfinder",
+                    title: "Scan Meal",
+                    subtitle: "AI camera, barcode, or photo"
+                ) {
+                    onScanMeal()
+                }
 
-                    addOption(
-                        icon: "plus.circle",
+                // Secondary actions
+                HStack(spacing: FuelSpacing.sm) {
+                    secondaryOption(
+                        icon: "flame",
                         title: "Quick Add",
-                        subtitle: "Add calories directly"
+                        color: Color(.systemOrange)
                     ) {
-                        // Quick add
+                        onQuickAdd()
                     }
-                }
-                .padding(.horizontal, FuelSpacing.screenHorizontal)
 
-                Spacer()
-            }
-            .padding(.top, FuelSpacing.lg)
-            .background(FuelColors.surface)
-            .navigationTitle("Add Meal")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        FuelHaptics.shared.tap()
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(FuelColors.textSecondary)
+                    secondaryOption(
+                        icon: "plus.square",
+                        title: "Create",
+                        color: Color(.systemBlue)
+                    ) {
+                        onCreateFood()
                     }
                 }
             }
+            .padding(.horizontal, FuelSpacing.screenHorizontal)
+
+            Spacer()
         }
+        .background(FuelColors.surface)
     }
 
-    private func addOption(
+    // Primary action button (full width, prominent)
+    private func primaryOption(
         icon: String,
         title: String,
         subtitle: String,
@@ -456,37 +257,73 @@ struct AddMealSheet: View {
             action()
         } label: {
             HStack(spacing: FuelSpacing.md) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: FuelSpacing.radiusMd)
-                        .fill(FuelColors.primaryLight)
-                        .frame(width: 48, height: 48)
+                Image(systemName: icon)
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(.white)
+                    .frame(width: 48, height: 48)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(FuelColors.primary)
+                    )
 
-                    Image(systemName: icon)
-                        .font(.system(size: 22))
-                        .foregroundStyle(FuelColors.primary)
-                }
-
-                VStack(alignment: .leading, spacing: FuelSpacing.xxxs) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(title)
-                        .font(FuelTypography.headline)
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(FuelColors.textPrimary)
 
                     Text(subtitle)
-                        .font(FuelTypography.caption)
+                        .font(.system(size: 13))
                         .foregroundStyle(FuelColors.textSecondary)
                 }
 
                 Spacer()
 
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(FuelColors.textTertiary)
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(FuelColors.primary)
             }
             .padding(FuelSpacing.md)
+            .background(FuelColors.primary.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusLg))
+            .overlay(
+                RoundedRectangle(cornerRadius: FuelSpacing.radiusLg)
+                    .stroke(FuelColors.primary.opacity(0.15), lineWidth: 1)
+            )
+        }
+        .buttonStyle(ScaleButtonStyle())
+    }
+
+    // Secondary action button (compact, side by side)
+    private func secondaryOption(
+        icon: String,
+        title: String,
+        color: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            FuelHaptics.shared.tap()
+            action()
+        } label: {
+            VStack(spacing: FuelSpacing.sm) {
+                Image(systemName: icon)
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundStyle(color)
+                    .frame(width: 52, height: 52)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(color.opacity(0.1))
+                    )
+
+                Text(title)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(FuelColors.textPrimary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, FuelSpacing.md)
             .background(FuelColors.surfaceSecondary)
             .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusLg))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(ScaleButtonStyle())
     }
 }
 

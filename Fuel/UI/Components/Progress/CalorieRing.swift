@@ -145,11 +145,11 @@ public struct CalorieRing: View {
                         FuelHaptics.shared.celebration()
                     }
                 }
-                .font(FuelTypography.display)
+                .font(FuelTypography.hero)
                 .foregroundStyle(FuelColors.textPrimary)
             } else {
                 Text("\(consumed)")
-                    .font(FuelTypography.display)
+                    .font(FuelTypography.hero)
                     .foregroundStyle(FuelColors.textPrimary)
             }
 

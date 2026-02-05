@@ -99,18 +99,6 @@ struct GoalCard: View {
     }
 }
 
-// MARK: - Fitness Goal Extension
-
-extension FitnessGoal {
-    var icon: String {
-        switch self {
-        case .lose: return "arrow.down.circle.fill"
-        case .maintain: return "equal.circle.fill"
-        case .gain: return "arrow.up.circle.fill"
-        }
-    }
-}
-
 #Preview {
     GoalSelectionScreen(viewModel: OnboardingViewModel())
 }

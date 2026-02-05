@@ -11,7 +11,9 @@ struct FoodScannerView: View {
     @State private var selectedTab = 0
     @State private var capturedImage: UIImage?
     @State private var showingResults = false
-    @State private var showingBarcodeScanner = false
+    @State private var showingNotFoodAlert = false
+    @State private var scannedProduct: ScannedProduct?
+    @State private var showingProductSheet = false
 
     var body: some View {
         ZStack {
@@ -38,10 +40,11 @@ struct FoodScannerView: View {
                     )
                     .tag(0)
 
-                    // Barcode tab
-                    BarcodeContentView(
-                        onScanBarcode: {
-                            showingBarcodeScanner = true
+                    // Barcode tab - inline scanner
+                    InlineBarcodeScannerView(
+                        onProductFound: { product in
+                            scannedProduct = product
+                            showingProductSheet = true
                         }
                     )
                     .tag(1)
@@ -69,12 +72,35 @@ struct FoodScannerView: View {
                     onConfirm: {
                         showingResults = false
                         dismiss()
+                    },
+                    onNotFood: {
+                        showingResults = false
+                        capturedImage = nil
+                        showingNotFoodAlert = true
                     }
                 )
             }
         }
-        .fullScreenCover(isPresented: $showingBarcodeScanner) {
-            BarcodeScannerView()
+        .sheet(isPresented: $showingProductSheet) {
+            if let product = scannedProduct {
+                ScannedProductSheet(
+                    product: product,
+                    onAdd: { _ in
+                        showingProductSheet = false
+                        dismiss()
+                    },
+                    onScanAgain: {
+                        showingProductSheet = false
+                        scannedProduct = nil
+                    }
+                )
+                .presentationDetents([.medium, .large])
+            }
+        }
+        .alert("Not a Food Image", isPresented: $showingNotFoodAlert) {
+            Button("Try Again", role: .cancel) { }
+        } message: {
+            Text("We couldn't detect any food in this image. Please try again with a photo of your meal.")
         }
     }
 
@@ -194,15 +220,20 @@ struct CameraContentView: View {
     }
 
     private var guidanceFrame: some View {
-        VStack(spacing: FuelSpacing.md) {
-            RoundedRectangle(cornerRadius: FuelSpacing.radiusLg, style: .continuous)
-                .stroke(style: StrokeStyle(lineWidth: 3, dash: [10, 5]))
-                .foregroundStyle(.white.opacity(0.6))
-                .frame(width: 280, height: 280)
+        VStack(spacing: FuelSpacing.lg) {
+            // Scanning frame with red corner brackets
+            ScannerFrameView(size: 280, cornerLength: 40, lineWidth: 4)
+                .foregroundStyle(FuelColors.primary)
 
-            Text("Position your meal in the frame")
-                .font(FuelTypography.subheadline)
-                .foregroundStyle(.white.opacity(0.8))
+            VStack(spacing: FuelSpacing.xs) {
+                Text("Position your meal in the frame")
+                    .font(FuelTypography.headline)
+                    .foregroundStyle(.white)
+
+                Text("Make sure the food is well-lit")
+                    .font(FuelTypography.subheadline)
+                    .foregroundStyle(.white.opacity(0.7))
+            }
         }
     }
 
@@ -246,74 +277,158 @@ struct CameraContentView: View {
     }
 }
 
-// MARK: - Barcode Content View
+// MARK: - Inline Barcode Scanner View
 
-struct BarcodeContentView: View {
-    let onScanBarcode: () -> Void
+struct InlineBarcodeScannerView: View {
+    let onProductFound: (ScannedProduct) -> Void
+
+    @State private var viewModel = BarcodeScannerViewModel()
+    @State private var isLookingUp = false
+    @State private var lookupError: String?
+    @State private var showingError = false
 
     var body: some View {
-        VStack(spacing: FuelSpacing.xl) {
-            Spacer()
+        ZStack {
+            if viewModel.isCameraAuthorized {
+                // Camera preview
+                CameraPreviewView(session: viewModel.session)
+                    .ignoresSafeArea()
 
-            // Icon
-            ZStack {
-                Circle()
-                    .stroke(FuelColors.primary.opacity(0.3), lineWidth: 2)
-                    .frame(width: 120, height: 120)
+                // Scanner overlay
+                VStack {
+                    Spacer()
 
-                Image(systemName: "barcode.viewfinder")
-                    .font(.system(size: 50))
-                    .foregroundStyle(.white.opacity(0.8))
-            }
+                    // Scanner frame
+                    ZStack {
+                        // Corner brackets
+                        ScannerFrameView(size: 280, cornerLength: 40, lineWidth: 4)
+                            .foregroundStyle(FuelColors.primary)
 
-            // Text
-            VStack(spacing: FuelSpacing.sm) {
-                Text("Scan Barcode")
-                    .font(FuelTypography.headline)
-                    .foregroundStyle(.white)
+                        // Scanning line
+                        if viewModel.isSessionRunning && !isLookingUp {
+                            ScanningLineView()
+                        }
+                    }
 
-                Text("Scan the barcode on food packaging\nfor instant nutrition info")
-                    .font(FuelTypography.subheadline)
-                    .foregroundStyle(.white.opacity(0.7))
-                    .multilineTextAlignment(.center)
-            }
+                    // Instructions
+                    VStack(spacing: FuelSpacing.xs) {
+                        Text("Position barcode in the frame")
+                            .font(FuelTypography.headline)
+                            .foregroundStyle(.white)
 
-            // Scan button
-            Button {
-                FuelHaptics.shared.tap()
-                onScanBarcode()
-            } label: {
-                HStack(spacing: FuelSpacing.sm) {
-                    Image(systemName: "viewfinder")
-                    Text("Start Scanning")
+                        Text("UPC, EAN, and QR codes supported")
+                            .font(FuelTypography.caption)
+                            .foregroundStyle(.white.opacity(0.6))
+                    }
+                    .padding(.top, FuelSpacing.lg)
+
+                    Spacer()
                 }
-                .font(FuelTypography.headline)
-                .foregroundStyle(.black)
-                .padding(.horizontal, FuelSpacing.xl)
-                .padding(.vertical, FuelSpacing.md)
-                .background(FuelColors.primary)
-                .clipShape(Capsule())
-            }
 
-            // Supported formats
-            HStack(spacing: FuelSpacing.sm) {
-                Text("Supports:")
-                    .font(FuelTypography.caption)
-                    .foregroundStyle(.white.opacity(0.5))
+                // Loading overlay
+                if isLookingUp {
+                    Color.black.opacity(0.6)
+                        .ignoresSafeArea()
 
-                ForEach(["UPC", "EAN", "QR"], id: \.self) { format in
-                    Text(format)
-                        .font(FuelTypography.caption)
-                        .foregroundStyle(.white.opacity(0.7))
-                        .padding(.horizontal, FuelSpacing.sm)
-                        .padding(.vertical, FuelSpacing.xxxs)
-                        .background(.white.opacity(0.1))
-                        .clipShape(Capsule())
+                    VStack(spacing: FuelSpacing.md) {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(1.3)
+
+                        Text("Looking up product...")
+                            .font(FuelTypography.subheadline)
+                            .foregroundStyle(.white)
+                    }
+                }
+            } else {
+                // Permission view
+                VStack(spacing: FuelSpacing.lg) {
+                    Image(systemName: "barcode.viewfinder")
+                        .font(.system(size: 50))
+                        .foregroundStyle(.white.opacity(0.5))
+
+                    Text("Camera access needed")
+                        .font(FuelTypography.headline)
+                        .foregroundStyle(.white)
+
+                    Button {
+                        viewModel.openSettings()
+                    } label: {
+                        Text("Open Settings")
+                            .font(FuelTypography.subheadlineMedium)
+                            .foregroundStyle(FuelColors.primary)
+                    }
                 }
             }
-
-            Spacer()
         }
+        .onAppear {
+            viewModel.setupSession()
+            viewModel.startSession()
+            viewModel.onBarcodeDetected = handleBarcodeDetected
+        }
+        .onDisappear {
+            viewModel.stopSession()
+        }
+        .alert("Product Not Found", isPresented: $showingError) {
+            Button("Try Again", role: .cancel) {
+                viewModel.resetScanner()
+            }
+        } message: {
+            Text(lookupError ?? "Unable to find this product in our database.")
+        }
+    }
+
+    private func handleBarcodeDetected(_ barcode: String) {
+        isLookingUp = true
+        FuelHaptics.shared.success()
+
+        Task {
+            do {
+                let product = try await FoodDatabaseService.shared.lookupBarcode(barcode)
+                await MainActor.run {
+                    isLookingUp = false
+                    onProductFound(product)
+                }
+            } catch {
+                await MainActor.run {
+                    isLookingUp = false
+                    lookupError = "We couldn't find this product. Please try again or add it manually."
+                    showingError = true
+                    FuelHaptics.shared.error()
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Scanning Line Animation
+
+struct ScanningLineView: View {
+    @State private var offset: CGFloat = -100
+
+    var body: some View {
+        Rectangle()
+            .fill(
+                LinearGradient(
+                    colors: [
+                        FuelColors.primary.opacity(0),
+                        FuelColors.primary,
+                        FuelColors.primary.opacity(0)
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .frame(width: 250, height: 2)
+            .offset(y: offset)
+            .onAppear {
+                withAnimation(
+                    .easeInOut(duration: 1.5)
+                    .repeatForever(autoreverses: true)
+                ) {
+                    offset = 100
+                }
+            }
     }
 }
 
@@ -386,6 +501,48 @@ struct LibraryContentView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Scanner Frame View
+
+/// Corner bracket scanning frame
+struct ScannerFrameView: View {
+    let size: CGFloat
+    let cornerLength: CGFloat
+    let lineWidth: CGFloat
+
+    var body: some View {
+        ZStack {
+            // Top-left corner
+            CornerBracket(rotation: 0)
+                .position(x: cornerLength / 2, y: cornerLength / 2)
+
+            // Top-right corner
+            CornerBracket(rotation: 90)
+                .position(x: size - cornerLength / 2, y: cornerLength / 2)
+
+            // Bottom-right corner
+            CornerBracket(rotation: 180)
+                .position(x: size - cornerLength / 2, y: size - cornerLength / 2)
+
+            // Bottom-left corner
+            CornerBracket(rotation: 270)
+                .position(x: cornerLength / 2, y: size - cornerLength / 2)
+        }
+        .frame(width: size, height: size)
+    }
+
+    @ViewBuilder
+    private func CornerBracket(rotation: Double) -> some View {
+        Path { path in
+            path.move(to: CGPoint(x: 0, y: cornerLength))
+            path.addLine(to: CGPoint(x: 0, y: 0))
+            path.addLine(to: CGPoint(x: cornerLength, y: 0))
+        }
+        .stroke(style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+        .frame(width: cornerLength, height: cornerLength)
+        .rotationEffect(.degrees(rotation))
     }
 }
 

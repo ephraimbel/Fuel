@@ -26,12 +26,15 @@ public final class AuthService: NSObject {
     // MARK: - Continuation
 
     private var signInContinuation: CheckedContinuation<AuthUser, Error>?
+    private var authController: ASAuthorizationController?  // Keep strong reference to prevent deallocation
 
     // MARK: - Initialization
 
     private override init() {
         super.init()
-        checkExistingCredentials()
+        Task { @MainActor in
+            checkExistingCredentials()
+        }
     }
 
     // MARK: - Public Methods
@@ -39,21 +42,42 @@ public final class AuthService: NSObject {
     /// Sign in with Apple
     @MainActor
     public func signInWithApple() async throws -> AuthUser {
+        // Cancel any existing sign-in attempt
+        if let existingContinuation = signInContinuation {
+            existingContinuation.resume(throwing: AuthError.canceled)
+            signInContinuation = nil
+        }
+
         isLoading = true
         error = nil
 
-        defer { isLoading = false }
+        defer {
+            isLoading = false
+            authController = nil  // Clean up controller reference
+        }
 
-        return try await withCheckedThrowingContinuation { continuation in
-            self.signInContinuation = continuation
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                self.signInContinuation = continuation
 
-            let provider = ASAuthorizationAppleIDProvider()
-            let request = provider.createRequest()
-            request.requestedScopes = [.fullName, .email]
+                let provider = ASAuthorizationAppleIDProvider()
+                let request = provider.createRequest()
+                request.requestedScopes = [.fullName, .email]
 
-            let controller = ASAuthorizationController(authorizationRequests: [request])
-            controller.delegate = self
-            controller.performRequests()
+                let controller = ASAuthorizationController(authorizationRequests: [request])
+                controller.delegate = self
+                self.authController = controller  // Keep strong reference
+                controller.performRequests()
+            }
+        } onCancel: {
+            // Handle task cancellation - resume continuation with error
+            Task { @MainActor in
+                if let continuation = self.signInContinuation {
+                    continuation.resume(throwing: AuthError.canceled)
+                    self.signInContinuation = nil
+                }
+                self.authController = nil
+            }
         }
     }
 
@@ -110,6 +134,42 @@ public final class AuthService: NSObject {
         // await backendService.deleteAccount()
 
         signOut()
+
+        FuelHaptics.shared.success()
+    }
+
+    /// Process an external Apple ID credential (from onboarding SignInWithAppleButton)
+    /// This is used when the credential is obtained outside of the AuthService flow
+    @MainActor
+    public func processExternalCredential(_ credential: ASAuthorizationAppleIDCredential) {
+        let userID = credential.user
+
+        // Get name (only available on first sign-in)
+        var fullName: String?
+        if let name = credential.fullName {
+            fullName = [name.givenName, name.familyName]
+                .compactMap { $0 }
+                .joined(separator: " ")
+            if fullName?.isEmpty == true {
+                fullName = nil
+            }
+        }
+
+        // Get email (only available on first sign-in)
+        let email = credential.email
+
+        let user = AuthUser(
+            id: userID,
+            email: email,
+            fullName: fullName
+        )
+
+        // Save credentials
+        saveCredentials(user: user)
+
+        // Update state
+        currentUser = user
+        isAuthenticated = true
 
         FuelHaptics.shared.success()
     }
@@ -280,20 +340,29 @@ final class KeychainHelper {
 
     private init() {}
 
-    func save(key: String, value: String) {
-        guard let data = value.data(using: .utf8) else { return }
+    @discardableResult
+    func save(key: String, value: String) -> Bool {
+        guard let data = value.data(using: .utf8) else { return false }
 
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: key,
-            kSecValueData as String: data
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
 
-        // Delete existing item
+        // Delete existing item first
         SecItemDelete(query as CFDictionary)
 
         // Add new item
-        SecItemAdd(query as CFDictionary, nil)
+        let status = SecItemAdd(query as CFDictionary, nil)
+        if status != errSecSuccess {
+            #if DEBUG
+            print("Keychain save failed with status: \(status)")
+            #endif
+            return false
+        }
+        return true
     }
 
     func read(key: String) -> String? {
@@ -311,12 +380,15 @@ final class KeychainHelper {
         return String(data: data, encoding: .utf8)
     }
 
-    func delete(key: String) {
+    @discardableResult
+    func delete(key: String) -> Bool {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: key
         ]
 
-        SecItemDelete(query as CFDictionary)
+        let status = SecItemDelete(query as CFDictionary)
+        // errSecItemNotFound is acceptable - item was already deleted
+        return status == errSecSuccess || status == errSecItemNotFound
     }
 }

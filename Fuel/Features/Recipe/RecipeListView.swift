@@ -7,16 +7,17 @@ struct RecipeListView: View {
     @State private var viewModel = RecipeViewModel()
     @State private var showingCreateRecipe = false
     @State private var selectedRecipe: Recipe? = nil
+    @State private var showRecipePaywall = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: FuelSpacing.lg) {
-                    // Search bar
-                    searchBar
-
-                    // Category filter
-                    categoryFilter
+                VStack(spacing: FuelSpacing.sectionSpacing) {
+                    // Search and filter section
+                    VStack(spacing: FuelSpacing.md) {
+                        searchBar
+                        categoryFilter
+                    }
 
                     // Favorites section
                     if !viewModel.favoriteRecipes.isEmpty && viewModel.selectedCategory == nil && viewModel.searchText.isEmpty {
@@ -27,16 +28,23 @@ struct RecipeListView: View {
                     recipesSection
                 }
                 .padding(.horizontal, FuelSpacing.screenHorizontal)
-                .padding(.vertical, FuelSpacing.lg)
+                .padding(.bottom, FuelSpacing.screenBottom + 80) // Tab bar space
             }
+            .scrollIndicators(.hidden)
             .background(FuelColors.background)
             .navigationTitle("Recipes")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        showingCreateRecipe = true
-                        FuelHaptics.shared.tap()
+                        // Check recipe limit before allowing creation
+                        if FeatureGateService.shared.canSaveRecipe(currentCount: viewModel.recipes.count) {
+                            showingCreateRecipe = true
+                            FuelHaptics.shared.tap()
+                        } else {
+                            FuelHaptics.shared.error()
+                            showRecipePaywall = true
+                        }
                     } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 16, weight: .semibold))
@@ -45,8 +53,14 @@ struct RecipeListView: View {
             }
             .sheet(isPresented: $showingCreateRecipe) {
                 CreateRecipeView { recipe in
-                    viewModel.addRecipe(recipe)
+                    let result = viewModel.addRecipe(recipe)
+                    if result == .limitReached {
+                        showRecipePaywall = true
+                    }
                 }
+            }
+            .fullScreenCover(isPresented: $showRecipePaywall) {
+                PaywallView(context: .recipeLimit)
             }
             .sheet(item: $selectedRecipe) { recipe in
                 RecipeDetailView(recipe: recipe) {
@@ -125,19 +139,31 @@ struct RecipeListView: View {
         }
     }
 
+    // MARK: - Section Header
+
+    private func sectionHeader(title: String, icon: String, iconColor: Color = FuelColors.textTertiary) -> some View {
+        HStack(spacing: FuelSpacing.xs) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(iconColor)
+
+            Text(title)
+                .font(FuelTypography.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(FuelColors.textTertiary)
+                .textCase(.uppercase)
+                .tracking(0.5)
+
+            Spacer()
+        }
+        .padding(.bottom, FuelSpacing.xs)
+    }
+
     // MARK: - Favorites Section
 
     private var favoritesSection: some View {
-        VStack(alignment: .leading, spacing: FuelSpacing.md) {
-            HStack {
-                Image(systemName: "heart.fill")
-                    .font(.system(size: 12))
-                    .foregroundStyle(FuelColors.error)
-
-                Text("FAVORITES")
-                    .font(FuelTypography.caption)
-                    .foregroundStyle(FuelColors.textTertiary)
-            }
+        VStack(alignment: .leading, spacing: 0) {
+            sectionHeader(title: "Favorites", icon: "heart.fill", iconColor: FuelColors.error)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: FuelSpacing.md) {
@@ -154,15 +180,12 @@ struct RecipeListView: View {
     // MARK: - Recipes Section
 
     private var recipesSection: some View {
-        VStack(alignment: .leading, spacing: FuelSpacing.md) {
+        VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Image(systemName: "book.fill")
-                    .font(.system(size: 12))
-                    .foregroundStyle(FuelColors.textTertiary)
-
-                Text(viewModel.selectedCategory?.displayName.uppercased() ?? "ALL RECIPES")
-                    .font(FuelTypography.caption)
-                    .foregroundStyle(FuelColors.textTertiary)
+                sectionHeader(
+                    title: viewModel.selectedCategory?.displayName ?? "All Recipes",
+                    icon: "book.fill"
+                )
 
                 Spacer()
 
@@ -174,7 +197,7 @@ struct RecipeListView: View {
             if viewModel.filteredRecipes.isEmpty {
                 emptyState
             } else {
-                LazyVStack(spacing: FuelSpacing.md) {
+                LazyVStack(spacing: FuelSpacing.cardSpacing) {
                     ForEach(viewModel.filteredRecipes, id: \.id) { recipe in
                         RecipeCard(recipe: recipe) {
                             selectedRecipe = recipe
@@ -294,7 +317,8 @@ struct RecipeCard: View {
             }
             .padding(FuelSpacing.md)
             .background(FuelColors.surface)
-            .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
+            .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusLg))
+            .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
         }
         .buttonStyle(.plain)
     }

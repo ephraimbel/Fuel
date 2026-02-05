@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Daily Progress Card
-/// Shows calorie ring and macro progress bars
+/// Premium card showing calorie ring and macro progress with gradients and animations
 
 struct DailyProgressCard: View {
     let totalCalories: Int
@@ -20,16 +20,17 @@ struct DailyProgressCard: View {
     let isOverGoal: Bool
 
     @State private var animatedProgress: Double = 0
+    @State private var animatedProtein: Double = 0
+    @State private var animatedCarbs: Double = 0
+    @State private var animatedFat: Double = 0
     @State private var showCalories = false
+    @State private var hasAppeared = false
 
     var body: some View {
         VStack(spacing: FuelSpacing.lg) {
             // Calorie ring section
             HStack(spacing: FuelSpacing.xl) {
-                // Calorie ring
                 calorieRing
-
-                // Calorie stats
                 calorieStats
             }
 
@@ -39,35 +40,50 @@ struct DailyProgressCard: View {
         .padding(FuelSpacing.lg)
         .background(FuelColors.surface)
         .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusLg))
+        .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
         .onAppear {
+            guard !hasAppeared else { return }
+            hasAppeared = true
             animateProgress()
         }
     }
 
-    // MARK: - Calorie Ring
+    // MARK: - Premium Calorie Ring
 
     private var calorieRing: some View {
         ZStack {
-            // Background ring
+            // Background ring (empty part)
             Circle()
                 .stroke(FuelColors.surfaceSecondary, lineWidth: 12)
                 .frame(width: 120, height: 120)
 
-            // Progress ring
+            // Subtle glow behind filled portion only
             Circle()
                 .trim(from: 0, to: animatedProgress)
                 .stroke(
-                    isOverGoal ? FuelColors.error : FuelColors.primary,
+                    ringColor.opacity(0.3),
+                    style: StrokeStyle(lineWidth: 16, lineCap: .round)
+                )
+                .frame(width: 120, height: 120)
+                .rotationEffect(.degrees(-90))
+                .blur(radius: 6)
+
+            // Progress ring with gradient (filled part only)
+            Circle()
+                .trim(from: 0, to: animatedProgress)
+                .stroke(
+                    ringGradient,
                     style: StrokeStyle(lineWidth: 12, lineCap: .round)
                 )
                 .frame(width: 120, height: 120)
                 .rotationEffect(.degrees(-90))
+                .animation(.spring(response: 0.8, dampingFraction: 0.7), value: animatedProgress)
 
             // Center content
             VStack(spacing: FuelSpacing.xxxs) {
                 if showCalories {
                     Text("\(totalCalories)")
-                        .font(.system(size: 28, weight: .bold))
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundStyle(isOverGoal ? FuelColors.error : FuelColors.textPrimary)
                         .contentTransition(.numericText())
 
@@ -76,8 +92,43 @@ struct DailyProgressCard: View {
                         .foregroundStyle(FuelColors.textTertiary)
                 } else {
                     ProgressView()
+                        .tint(FuelColors.primary)
                 }
             }
+        }
+    }
+
+    // Solid color for glow
+    private var ringColor: Color {
+        if isOverGoal {
+            return FuelColors.error
+        } else if animatedProgress >= 1.0 {
+            return FuelColors.success
+        } else {
+            return FuelColors.primary
+        }
+    }
+
+    // Ring gradient based on state
+    private var ringGradient: LinearGradient {
+        if isOverGoal {
+            return LinearGradient(
+                colors: [FuelColors.error, FuelColors.error.opacity(0.7)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        } else if animatedProgress >= 1.0 {
+            return LinearGradient(
+                colors: [FuelColors.success, FuelColors.success.opacity(0.8)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        } else {
+            return LinearGradient(
+                colors: [FuelColors.primary, FuelColors.primary.opacity(0.7)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         }
     }
 
@@ -85,7 +136,6 @@ struct DailyProgressCard: View {
 
     private var calorieStats: some View {
         VStack(alignment: .leading, spacing: FuelSpacing.md) {
-            // Remaining
             VStack(alignment: .leading, spacing: FuelSpacing.xxxs) {
                 HStack(spacing: FuelSpacing.xs) {
                     Circle()
@@ -98,7 +148,7 @@ struct DailyProgressCard: View {
                 }
 
                 Text("\(isOverGoal ? totalCalories - calorieGoal : remainingCalories)")
-                    .font(FuelTypography.title2)
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundStyle(isOverGoal ? FuelColors.error : FuelColors.textPrimary)
                 + Text(" cal")
                     .font(FuelTypography.subheadline)
@@ -107,7 +157,6 @@ struct DailyProgressCard: View {
 
             Divider()
 
-            // Goal
             VStack(alignment: .leading, spacing: FuelSpacing.xxxs) {
                 Text("Daily Goal")
                     .font(FuelTypography.caption)
@@ -121,65 +170,143 @@ struct DailyProgressCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - Macro Progress Section
+    // MARK: - Premium Macro Progress Section
 
     private var macroProgressSection: some View {
         HStack(spacing: FuelSpacing.md) {
-            macroProgressBar(
+            PremiumMacroBar(
                 name: "Protein",
                 current: protein,
                 goal: proteinGoal,
-                progress: proteinProgress,
+                animatedProgress: animatedProtein,
                 color: FuelColors.protein
             )
 
-            macroProgressBar(
+            PremiumMacroBar(
                 name: "Carbs",
                 current: carbs,
                 goal: carbsGoal,
-                progress: carbsProgress,
+                animatedProgress: animatedCarbs,
                 color: FuelColors.carbs
             )
 
-            macroProgressBar(
+            PremiumMacroBar(
                 name: "Fat",
                 current: fat,
                 goal: fatGoal,
-                progress: fatProgress,
+                animatedProgress: animatedFat,
                 color: FuelColors.fat
             )
         }
     }
 
-    private func macroProgressBar(
-        name: String,
-        current: Double,
-        goal: Double,
-        progress: Double,
-        color: Color
-    ) -> some View {
+    // MARK: - Animation
+
+    private func animateProgress() {
+        // Stagger animations for premium feel
+        withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
+            animatedProgress = min(calorieProgress, 1.0)
+        }
+
+        // Animate macros with stagger
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+                animatedProtein = min(proteinProgress, 1.0)
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+                animatedCarbs = min(carbsProgress, 1.0)
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+                animatedFat = min(fatProgress, 1.0)
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            withAnimation(.easeOut(duration: 0.4)) {
+                showCalories = true
+            }
+        }
+
+        // Haptic on calorie goal completion
+        if calorieProgress >= 1.0 && !isOverGoal {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                FuelHaptics.shared.success()
+            }
+        }
+    }
+}
+
+// MARK: - Premium Macro Bar Component
+
+struct PremiumMacroBar: View {
+    let name: String
+    let current: Double
+    let goal: Double
+    let animatedProgress: Double
+    let color: Color
+
+    @State private var showCompletion = false
+    @State private var pulseScale: CGFloat = 1.0
+
+    private var isComplete: Bool {
+        current >= goal
+    }
+
+    var body: some View {
         VStack(spacing: FuelSpacing.sm) {
-            // Progress bar
+            // Progress bar with gradient
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     // Background
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(color.opacity(0.2))
+                        .fill(color.opacity(0.15))
                         .frame(height: 8)
 
-                    // Progress
+                    // Gradient progress fill
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(color)
-                        .frame(width: geometry.size.width * min(progress, 1.0), height: 8)
+                        .fill(
+                            LinearGradient(
+                                colors: [color, color.opacity(0.7)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: geometry.size.width * animatedProgress, height: 8)
+                        .animation(.spring(response: 0.6, dampingFraction: 0.7), value: animatedProgress)
+
+                    // Glow on completion
+                    if isComplete {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(color.opacity(0.3))
+                            .frame(width: geometry.size.width * animatedProgress, height: 8)
+                            .blur(radius: 4)
+                            .scaleEffect(y: pulseScale)
+                    }
                 }
             }
             .frame(height: 8)
 
-            // Label
+            // Label with completion state
             VStack(spacing: FuelSpacing.xxxs) {
-                Text("\(Int(current))g")
-                    .font(FuelTypography.subheadlineMedium)
-                    .foregroundStyle(FuelColors.textPrimary)
+                HStack(spacing: 2) {
+                    Text("\(Int(current))g")
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundStyle(FuelColors.textPrimary)
+
+                    // Checkmark on completion
+                    if isComplete && showCompletion {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(color)
+                            .transition(.scale.combined(with: .opacity))
+                    }
+                }
 
                 Text(name)
                     .font(FuelTypography.caption)
@@ -187,18 +314,26 @@ struct DailyProgressCard: View {
             }
         }
         .frame(maxWidth: .infinity)
-    }
+        .onChange(of: animatedProgress) { _, newValue in
+            if newValue >= 1.0 && isComplete {
+                // Trigger completion animation
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+                    showCompletion = true
+                }
 
-    // MARK: - Animation
+                // Pulse animation
+                withAnimation(.easeInOut(duration: 0.3).repeatCount(2, autoreverses: true)) {
+                    pulseScale = 1.3
+                }
 
-    private func animateProgress() {
-        withAnimation(.easeOut(duration: 0.8)) {
-            animatedProgress = min(calorieProgress, 1.0)
-        }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        pulseScale = 1.0
+                    }
+                }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            withAnimation(.easeOut(duration: 0.5)) {
-                showCalories = true
+                // Haptic feedback
+                FuelHaptics.shared.success()
             }
         }
     }
@@ -207,41 +342,63 @@ struct DailyProgressCard: View {
 // MARK: - Preview
 
 #Preview {
-    VStack {
-        DailyProgressCard(
-            totalCalories: 1420,
-            calorieGoal: 2000,
-            remainingCalories: 580,
-            calorieProgress: 0.71,
-            proteinProgress: 0.6,
-            carbsProgress: 0.45,
-            fatProgress: 0.8,
-            protein: 73,
-            carbs: 90,
-            fat: 52,
-            proteinGoal: 150,
-            carbsGoal: 200,
-            fatGoal: 65,
-            isOverGoal: false
-        )
+    ScrollView {
+        VStack(spacing: 20) {
+            // Under goal
+            DailyProgressCard(
+                totalCalories: 1420,
+                calorieGoal: 2000,
+                remainingCalories: 580,
+                calorieProgress: 0.71,
+                proteinProgress: 0.6,
+                carbsProgress: 0.45,
+                fatProgress: 0.8,
+                protein: 90,
+                carbs: 90,
+                fat: 52,
+                proteinGoal: 150,
+                carbsGoal: 200,
+                fatGoal: 65,
+                isOverGoal: false
+            )
 
-        DailyProgressCard(
-            totalCalories: 2200,
-            calorieGoal: 2000,
-            remainingCalories: 0,
-            calorieProgress: 1.1,
-            proteinProgress: 0.9,
-            carbsProgress: 1.0,
-            fatProgress: 1.0,
-            protein: 135,
-            carbs: 200,
-            fat: 65,
-            proteinGoal: 150,
-            carbsGoal: 200,
-            fatGoal: 65,
-            isOverGoal: true
-        )
+            // At goal with completions
+            DailyProgressCard(
+                totalCalories: 2000,
+                calorieGoal: 2000,
+                remainingCalories: 0,
+                calorieProgress: 1.0,
+                proteinProgress: 1.0,
+                carbsProgress: 1.0,
+                fatProgress: 1.0,
+                protein: 150,
+                carbs: 200,
+                fat: 65,
+                proteinGoal: 150,
+                carbsGoal: 200,
+                fatGoal: 65,
+                isOverGoal: false
+            )
+
+            // Over goal
+            DailyProgressCard(
+                totalCalories: 2300,
+                calorieGoal: 2000,
+                remainingCalories: 0,
+                calorieProgress: 1.15,
+                proteinProgress: 0.9,
+                carbsProgress: 1.1,
+                fatProgress: 1.2,
+                protein: 135,
+                carbs: 220,
+                fat: 78,
+                proteinGoal: 150,
+                carbsGoal: 200,
+                fatGoal: 65,
+                isOverGoal: true
+            )
+        }
+        .padding()
     }
-    .padding()
     .background(FuelColors.background)
 }

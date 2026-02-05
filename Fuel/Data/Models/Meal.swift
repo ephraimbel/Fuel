@@ -167,10 +167,10 @@ public enum MealType: String, Codable, CaseIterable {
 
     public var icon: String {
         switch self {
-        case .breakfast: return "sun.rise.fill"
+        case .breakfast: return "sunrise.fill"
         case .lunch: return "sun.max.fill"
         case .dinner: return "moon.stars.fill"
-        case .snack: return "carrot.fill"
+        case .snack: return "popcorn.fill"
         }
     }
 

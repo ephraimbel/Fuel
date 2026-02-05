@@ -226,9 +226,22 @@ final class RecipeViewModel {
         FuelHaptics.shared.tap()
     }
 
-    func addRecipe(_ recipe: Recipe) {
+    /// Result of attempting to add a recipe
+    enum AddRecipeResult {
+        case success
+        case limitReached
+    }
+
+    func addRecipe(_ recipe: Recipe) -> AddRecipeResult {
+        // Check recipe limit for free users
+        guard FeatureGateService.shared.canSaveRecipe(currentCount: recipes.count) else {
+            FuelHaptics.shared.error()
+            return .limitReached
+        }
+
         recipes.insert(recipe, at: 0)
         FuelHaptics.shared.success()
+        return .success
     }
 
     func updateRecipe(_ recipe: Recipe) {

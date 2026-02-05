@@ -51,6 +51,11 @@ public final class User {
     public var subscriptionExpiresAt: Date?
     public var trialEndsAt: Date?
 
+    // MARK: - Scan Tracking
+
+    public var weeklyAIScansUsed: Int
+    public var weeklyScansResetDate: Date?
+
     // MARK: - Stats
 
     public var totalMealsLogged: Int
@@ -107,6 +112,8 @@ public final class User {
         self.weeklyWeighInDay = 1 // Monday
 
         self.subscriptionTier = .free
+        self.weeklyAIScansUsed = 0
+        self.weeklyScansResetDate = nil
         self.totalMealsLogged = 0
         self.currentStreak = 0
         self.longestStreak = 0
@@ -120,12 +127,13 @@ public final class User {
     }
 
     public var bmi: Double {
+        guard heightCm > 0 else { return 0 }
         let heightM = heightCm / 100
         return currentWeightKg / (heightM * heightM)
     }
 
     public var isPremium: Bool {
-        subscriptionTier == .premium || subscriptionTier == .lifetime
+        subscriptionTier == .premium
     }
 
     public var isInTrial: Bool {
@@ -141,27 +149,46 @@ public final class User {
         max(0, targetWeightKg - currentWeightKg)
     }
 
+    /// Remaining AI scans this week
+    public var remainingAIScans: Int {
+        if isPremium || isInTrial { return .max }
+        resetWeeklyScansIfNeeded()
+        return max(0, subscriptionTier.aiScansPerWeek - weeklyAIScansUsed)
+    }
+
+    /// Whether user can perform an AI scan
+    public var canUseAIScan: Bool {
+        if isPremium || isInTrial { return true }
+        resetWeeklyScansIfNeeded()
+        return weeklyAIScansUsed < subscriptionTier.aiScansPerWeek
+    }
+
     // MARK: - Methods
 
     /// Calculate TDEE using Mifflin-St Jeor equation
     public func calculateTDEE() -> Int {
-        guard let age else { return 2000 }
+        guard let age, age > 0, age < 150 else { return 2000 }
+
+        // Validate inputs for realistic ranges
+        let validWeight = max(30, min(currentWeightKg, 500))  // 30-500 kg
+        let validHeight = max(100, min(heightCm, 300))        // 100-300 cm
 
         // BMR calculation
         var bmr: Double
         switch gender {
         case .male:
-            bmr = (10 * currentWeightKg) + (6.25 * heightCm) - (5 * Double(age)) + 5
+            bmr = (10 * validWeight) + (6.25 * validHeight) - (5 * Double(age)) + 5
         case .female:
-            bmr = (10 * currentWeightKg) + (6.25 * heightCm) - (5 * Double(age)) - 161
+            bmr = (10 * validWeight) + (6.25 * validHeight) - (5 * Double(age)) - 161
         case .notSpecified:
-            bmr = (10 * currentWeightKg) + (6.25 * heightCm) - (5 * Double(age)) - 78
+            bmr = (10 * validWeight) + (6.25 * validHeight) - (5 * Double(age)) - 78
         }
 
         // Apply activity multiplier
         let tdee = bmr * activityLevel.multiplier
 
-        return Int(tdee)
+        // Clamp to reasonable range (800-8000 calories)
+        return max(800, min(Int(tdee), 8000))
     }
 
     /// Calculate daily calorie target based on goal
@@ -205,6 +232,31 @@ public final class User {
         let carbGrams = Int(carbCalories / 4)
 
         return (proteinGrams, carbGrams, fatGrams)
+    }
+
+    /// Use an AI scan (decrements counter for free users)
+    public func useAIScan() {
+        guard !isPremium && !isInTrial else { return }
+        resetWeeklyScansIfNeeded()
+        weeklyAIScansUsed += 1
+    }
+
+    /// Reset weekly scan counter if a week has passed
+    private func resetWeeklyScansIfNeeded() {
+        let calendar = Calendar.current
+        let now = Date()
+
+        guard let resetDate = weeklyScansResetDate else {
+            weeklyScansResetDate = now
+            weeklyAIScansUsed = 0
+            return
+        }
+
+        if let daysDiff = calendar.dateComponents([.day], from: resetDate, to: now).day,
+           daysDiff >= 7 {
+            weeklyScansResetDate = now
+            weeklyAIScansUsed = 0
+        }
     }
 
     /// Update streak based on logged meals
@@ -287,6 +339,16 @@ public enum ActivityLevel: String, Codable, CaseIterable {
         case .veryActive: return 1.9
         }
     }
+
+    public var icon: String {
+        switch self {
+        case .sedentary: return "figure.stand"
+        case .light: return "figure.walk"
+        case .moderate: return "figure.run"
+        case .active: return "figure.highintensity.intervaltraining"
+        case .veryActive: return "flame.fill"
+        }
+    }
 }
 
 public enum FitnessGoal: String, Codable, CaseIterable {
@@ -341,20 +403,34 @@ public enum Units: String, Codable, CaseIterable {
 public enum SubscriptionTier: String, Codable, CaseIterable {
     case free = "free"
     case premium = "premium"
-    case lifetime = "lifetime"
 
     public var displayName: String {
         switch self {
         case .free: return "Free"
-        case .premium: return "Premium"
-        case .lifetime: return "Lifetime"
+        case .premium: return "Fuel+"
         }
     }
 
-    public var aiScansPerDay: Int {
+    public var aiScansPerWeek: Int {
         switch self {
         case .free: return 3
-        case .premium, .lifetime: return .max
+        case .premium: return .max
+        }
+    }
+
+    /// Maximum recipes for this tier
+    public var maxRecipes: Int {
+        switch self {
+        case .free: return 3
+        case .premium: return .max
+        }
+    }
+
+    /// Maximum history days for this tier
+    public var historyDays: Int {
+        switch self {
+        case .free: return 7
+        case .premium: return .max
         }
     }
 }

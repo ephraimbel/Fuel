@@ -11,21 +11,60 @@ struct WeightChartView: View {
     @State private var selectedEntry: WeightDataPoint?
 
     private var minWeight: Double {
-        let minEntry = entries.map { $0.weight }.min() ?? 0
+        guard !entries.isEmpty else { return goalWeight - 10 }
+        let minEntry = entries.map { $0.weight }.min() ?? goalWeight
         return min(minEntry, goalWeight) - 5
     }
 
     private var maxWeight: Double {
-        let maxEntry = entries.map { $0.weight }.max() ?? 0
+        guard !entries.isEmpty else { return goalWeight + 10 }
+        let maxEntry = entries.map { $0.weight }.max() ?? goalWeight
         return max(maxEntry, goalWeight) + 5
     }
 
     var body: some View {
-        if #available(iOS 16.0, *) {
+        VStack(spacing: FuelSpacing.sm) {
+            // Chart
+            chartContent
+                .frame(maxWidth: .infinity)
+
+            // Legend
+            legendView
+        }
+    }
+
+    // MARK: - Chart Content
+
+    @ViewBuilder
+    private var chartContent: some View {
+        if entries.isEmpty {
+            emptyChartView
+        } else if #available(iOS 16.0, *) {
             swiftChartsView
         } else {
             customChartView
         }
+    }
+
+    // MARK: - Empty State
+
+    private var emptyChartView: some View {
+        VStack(spacing: FuelSpacing.sm) {
+            Image(systemName: "chart.line.uptrend.xyaxis")
+                .font(.system(size: 32))
+                .foregroundStyle(FuelColors.textTertiary)
+
+            Text("No weight data yet")
+                .font(FuelTypography.subheadline)
+                .foregroundStyle(FuelColors.textTertiary)
+
+            Text("Log your weight to see trends")
+                .font(FuelTypography.caption)
+                .foregroundStyle(FuelColors.textTertiary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(FuelColors.surfaceSecondary.opacity(0.3))
+        .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusSm))
     }
 
     // MARK: - Swift Charts (iOS 16+)
@@ -35,48 +74,69 @@ struct WeightChartView: View {
         Chart {
             // Goal line
             RuleMark(y: .value("Goal", goalWeight))
-                .foregroundStyle(FuelColors.primary.opacity(0.5))
-                .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
-                .annotation(position: .trailing, alignment: .leading) {
-                    Text("Goal")
-                        .font(FuelTypography.caption)
-                        .foregroundStyle(FuelColors.primary)
-                }
+                .foregroundStyle(FuelColors.success.opacity(0.6))
+                .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
 
-            // Weight line
+            // Weight data
             ForEach(entries) { entry in
-                LineMark(
-                    x: .value("Date", entry.date),
-                    y: .value("Weight", entry.weight)
-                )
-                .foregroundStyle(FuelColors.primary)
-                .interpolationMethod(.catmullRom)
-
+                // Area under the line
                 AreaMark(
                     x: .value("Date", entry.date),
                     y: .value("Weight", entry.weight)
                 )
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [FuelColors.primary.opacity(0.3), FuelColors.primary.opacity(0.0)],
+                        colors: [
+                            FuelColors.primary.opacity(0.25),
+                            FuelColors.primary.opacity(0.05)
+                        ],
                         startPoint: .top,
                         endPoint: .bottom
                     )
                 )
                 .interpolationMethod(.catmullRom)
 
+                // Line
+                LineMark(
+                    x: .value("Date", entry.date),
+                    y: .value("Weight", entry.weight)
+                )
+                .foregroundStyle(FuelColors.primary)
+                .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+                .interpolationMethod(.catmullRom)
+
+                // Points
+                PointMark(
+                    x: .value("Date", entry.date),
+                    y: .value("Weight", entry.weight)
+                )
+                .foregroundStyle(selectedEntry?.id == entry.id ? FuelColors.primary : .white)
+                .symbolSize(selectedEntry?.id == entry.id ? 80 : 40)
+            }
+
+            // Point borders
+            ForEach(entries) { entry in
                 PointMark(
                     x: .value("Date", entry.date),
                     y: .value("Weight", entry.weight)
                 )
                 .foregroundStyle(FuelColors.primary)
-                .symbolSize(selectedEntry?.id == entry.id ? 100 : 30)
+                .symbolSize(selectedEntry?.id == entry.id ? 120 : 60)
+                .symbol {
+                    Circle()
+                        .strokeBorder(FuelColors.primary, lineWidth: 2)
+                        .background(Circle().fill(selectedEntry?.id == entry.id ? FuelColors.primary : .white))
+                        .frame(width: selectedEntry?.id == entry.id ? 10 : 8)
+                }
             }
         }
         .chartYScale(domain: minWeight...maxWeight)
         .chartXAxis {
-            AxisMarks(values: .automatic(desiredCount: 5)) { value in
-                AxisValueLabel(format: .dateTime.month().day())
+            AxisMarks(values: .automatic(desiredCount: 4)) { _ in
+                AxisGridLine()
+                    .foregroundStyle(FuelColors.surfaceSecondary)
+                AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                    .font(FuelTypography.caption)
                     .foregroundStyle(FuelColors.textTertiary)
             }
         }
@@ -84,9 +144,19 @@ struct WeightChartView: View {
             AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) { value in
                 AxisGridLine()
                     .foregroundStyle(FuelColors.surfaceSecondary)
-                AxisValueLabel()
-                    .foregroundStyle(FuelColors.textTertiary)
+                AxisValueLabel {
+                    if let weight = value.as(Double.self) {
+                        Text("\(Int(weight))")
+                            .font(FuelTypography.caption)
+                            .foregroundStyle(FuelColors.textTertiary)
+                    }
+                }
             }
+        }
+        .chartPlotStyle { plotArea in
+            plotArea
+                .background(FuelColors.surfaceSecondary.opacity(0.2))
+                .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusSm))
         }
         .chartOverlay { proxy in
             GeometryReader { geometry in
@@ -98,10 +168,13 @@ struct WeightChartView: View {
                             .onChanged { value in
                                 let x = value.location.x
                                 if let date: Date = proxy.value(atX: x) {
-                                    selectedEntry = entries.min(by: {
+                                    let closest = entries.min(by: {
                                         abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date))
                                     })
-                                    FuelHaptics.shared.tap()
+                                    if closest?.id != selectedEntry?.id {
+                                        selectedEntry = closest
+                                        FuelHaptics.shared.tap()
+                                    }
                                 }
                             }
                             .onEnded { _ in
@@ -110,46 +183,80 @@ struct WeightChartView: View {
                     )
             }
         }
-        .overlay {
+        .overlay(alignment: .topLeading) {
             if let entry = selectedEntry {
                 tooltipView(for: entry)
+                    .padding(FuelSpacing.sm)
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                    .animation(.easeOut(duration: 0.15), value: selectedEntry?.id)
             }
         }
     }
 
-    // MARK: - Custom Chart (Fallback)
+    // MARK: - Custom Chart (Fallback for iOS 15)
 
     private var customChartView: some View {
         GeometryReader { geometry in
             let width = geometry.size.width
             let height = geometry.size.height
             let range = maxWeight - minWeight
+            let padding: CGFloat = 8
 
             ZStack {
+                // Background
+                RoundedRectangle(cornerRadius: FuelSpacing.radiusSm)
+                    .fill(FuelColors.surfaceSecondary.opacity(0.2))
+
                 // Grid lines
-                ForEach(0..<4, id: \.self) { i in
-                    let y = height * CGFloat(i) / 3
+                ForEach(0..<5, id: \.self) { i in
+                    let y = padding + (height - padding * 2) * CGFloat(i) / 4
                     Path { path in
-                        path.move(to: CGPoint(x: 0, y: y))
-                        path.addLine(to: CGPoint(x: width, y: y))
+                        path.move(to: CGPoint(x: padding, y: y))
+                        path.addLine(to: CGPoint(x: width - padding, y: y))
                     }
                     .stroke(FuelColors.surfaceSecondary, lineWidth: 1)
                 }
 
                 // Goal line
-                let goalY = height * (1 - CGFloat((goalWeight - minWeight) / range))
+                let goalY = padding + (height - padding * 2) * (1 - CGFloat((goalWeight - minWeight) / range))
                 Path { path in
-                    path.move(to: CGPoint(x: 0, y: goalY))
-                    path.addLine(to: CGPoint(x: width, y: goalY))
+                    path.move(to: CGPoint(x: padding, y: goalY))
+                    path.addLine(to: CGPoint(x: width - padding, y: goalY))
                 }
-                .stroke(FuelColors.primary.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [5, 5]))
+                .stroke(FuelColors.success.opacity(0.6), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
 
-                // Weight line
+                // Weight line and area
                 if entries.count > 1 {
+                    // Area fill
                     Path { path in
                         for (index, entry) in entries.enumerated() {
-                            let x = width * CGFloat(index) / CGFloat(entries.count - 1)
-                            let y = height * (1 - CGFloat((entry.weight - minWeight) / range))
+                            let x = padding + (width - padding * 2) * CGFloat(index) / CGFloat(entries.count - 1)
+                            let y = padding + (height - padding * 2) * (1 - CGFloat((entry.weight - minWeight) / range))
+
+                            if index == 0 {
+                                path.move(to: CGPoint(x: x, y: height - padding))
+                                path.addLine(to: CGPoint(x: x, y: y))
+                            } else {
+                                path.addLine(to: CGPoint(x: x, y: y))
+                            }
+                        }
+                        let lastX = padding + (width - padding * 2)
+                        path.addLine(to: CGPoint(x: lastX, y: height - padding))
+                        path.closeSubpath()
+                    }
+                    .fill(
+                        LinearGradient(
+                            colors: [FuelColors.primary.opacity(0.25), FuelColors.primary.opacity(0.05)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+
+                    // Line
+                    Path { path in
+                        for (index, entry) in entries.enumerated() {
+                            let x = padding + (width - padding * 2) * CGFloat(index) / CGFloat(entries.count - 1)
+                            let y = padding + (height - padding * 2) * (1 - CGFloat((entry.weight - minWeight) / range))
 
                             if index == 0 {
                                 path.move(to: CGPoint(x: x, y: y))
@@ -158,16 +265,20 @@ struct WeightChartView: View {
                             }
                         }
                     }
-                    .stroke(FuelColors.primary, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                    .stroke(FuelColors.primary, style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
 
                     // Points
                     ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
-                        let x = width * CGFloat(index) / CGFloat(entries.count - 1)
-                        let y = height * (1 - CGFloat((entry.weight - minWeight) / range))
+                        let x = padding + (width - padding * 2) * CGFloat(index) / CGFloat(entries.count - 1)
+                        let y = padding + (height - padding * 2) * (1 - CGFloat((entry.weight - minWeight) / range))
 
                         Circle()
-                            .fill(FuelColors.primary)
+                            .fill(.white)
                             .frame(width: 8, height: 8)
+                            .overlay(
+                                Circle()
+                                    .strokeBorder(FuelColors.primary, lineWidth: 2)
+                            )
                             .position(x: x, y: y)
                     }
                 }
@@ -175,10 +286,43 @@ struct WeightChartView: View {
         }
     }
 
+    // MARK: - Legend
+
+    private var legendView: some View {
+        HStack(spacing: FuelSpacing.lg) {
+            legendItem(color: FuelColors.primary, label: "Weight")
+            legendItem(color: FuelColors.success, label: "Goal", isDashed: true)
+        }
+    }
+
+    private func legendItem(color: Color, label: String, isDashed: Bool = false) -> some View {
+        HStack(spacing: FuelSpacing.xs) {
+            if isDashed {
+                HStack(spacing: 2) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        Rectangle()
+                            .fill(color)
+                            .frame(width: 4, height: 2)
+                    }
+                }
+                .frame(width: 16)
+            } else {
+                Rectangle()
+                    .fill(color)
+                    .frame(width: 16, height: 3)
+                    .clipShape(Capsule())
+            }
+
+            Text(label)
+                .font(FuelTypography.caption)
+                .foregroundStyle(FuelColors.textTertiary)
+        }
+    }
+
     // MARK: - Tooltip
 
     private func tooltipView(for entry: WeightDataPoint) -> some View {
-        VStack(spacing: FuelSpacing.xxxs) {
+        VStack(alignment: .leading, spacing: 2) {
             Text(entry.formattedDate)
                 .font(FuelTypography.caption)
                 .foregroundStyle(FuelColors.textTertiary)
@@ -187,31 +331,40 @@ struct WeightChartView: View {
                 .font(FuelTypography.subheadlineMedium)
                 .foregroundStyle(FuelColors.textPrimary)
         }
-        .padding(FuelSpacing.sm)
+        .padding(.horizontal, FuelSpacing.sm)
+        .padding(.vertical, FuelSpacing.xs)
         .background(FuelColors.surface)
         .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusSm))
-        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .padding(.top, FuelSpacing.sm)
+        .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
     }
 }
 
 // MARK: - Preview
 
 #Preview {
-    WeightChartView(
-        entries: [
-            WeightDataPoint(date: Date().addingTimeInterval(-6 * 24 * 3600), weight: 170),
-            WeightDataPoint(date: Date().addingTimeInterval(-5 * 24 * 3600), weight: 169),
-            WeightDataPoint(date: Date().addingTimeInterval(-4 * 24 * 3600), weight: 168.5),
-            WeightDataPoint(date: Date().addingTimeInterval(-3 * 24 * 3600), weight: 167),
-            WeightDataPoint(date: Date().addingTimeInterval(-2 * 24 * 3600), weight: 166.5),
-            WeightDataPoint(date: Date().addingTimeInterval(-1 * 24 * 3600), weight: 166),
-            WeightDataPoint(date: Date(), weight: 165)
-        ],
-        goalWeight: 155
-    )
-    .frame(height: 200)
+    VStack(spacing: 20) {
+        // With data
+        WeightChartView(
+            entries: [
+                WeightDataPoint(date: Date().addingTimeInterval(-6 * 24 * 3600), weight: 170),
+                WeightDataPoint(date: Date().addingTimeInterval(-5 * 24 * 3600), weight: 169),
+                WeightDataPoint(date: Date().addingTimeInterval(-4 * 24 * 3600), weight: 168.5),
+                WeightDataPoint(date: Date().addingTimeInterval(-3 * 24 * 3600), weight: 167),
+                WeightDataPoint(date: Date().addingTimeInterval(-2 * 24 * 3600), weight: 166.5),
+                WeightDataPoint(date: Date().addingTimeInterval(-1 * 24 * 3600), weight: 166),
+                WeightDataPoint(date: Date(), weight: 165)
+            ],
+            goalWeight: 160
+        )
+        .frame(height: 180)
+
+        // Empty state
+        WeightChartView(
+            entries: [],
+            goalWeight: 160
+        )
+        .frame(height: 180)
+    }
     .padding()
     .background(FuelColors.surface)
 }

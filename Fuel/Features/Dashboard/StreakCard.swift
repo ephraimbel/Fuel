@@ -7,87 +7,38 @@ struct StreakCard: View {
     let currentStreak: Int
     let longestStreak: Int
 
-    @State private var isAnimating = false
-
     var body: some View {
         HStack(spacing: FuelSpacing.md) {
-            // Fire icon with animation
-            ZStack {
-                // Glow effect
-                Circle()
-                    .fill(FuelColors.gold.opacity(0.3))
-                    .frame(width: 56, height: 56)
-                    .scaleEffect(isAnimating ? 1.2 : 1.0)
-                    .opacity(isAnimating ? 0.5 : 0.8)
-
-                // Fire icon
-                Image(systemName: "flame.fill")
-                    .font(.system(size: 28))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [FuelColors.gold, .orange, .red],
-                            startPoint: .bottom,
-                            endPoint: .top
-                        )
-                    )
-                    .scaleEffect(isAnimating ? 1.1 : 1.0)
-            }
+            // Fire icon
+            Image(systemName: "flame.fill")
+                .font(.system(size: 18))
+                .foregroundStyle(.orange)
+                .frame(width: 36, height: 36)
+                .background(.orange.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusSm))
 
             // Streak info
-            VStack(alignment: .leading, spacing: FuelSpacing.xxxs) {
-                HStack(alignment: .firstTextBaseline, spacing: FuelSpacing.xs) {
-                    Text("\(currentStreak)")
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundStyle(FuelColors.textPrimary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(currentStreak) day streak")
+                    .font(FuelTypography.subheadlineMedium)
+                    .foregroundStyle(FuelColors.textPrimary)
 
-                    Text("day streak")
-                        .font(FuelTypography.subheadline)
-                        .foregroundStyle(FuelColors.textSecondary)
-                }
-
-                Text("Keep it up! 🔥")
+                Text("Longest: \(longestStreak) days")
                     .font(FuelTypography.caption)
                     .foregroundStyle(FuelColors.textTertiary)
             }
 
             Spacer()
 
-            // Longest streak
-            VStack(alignment: .trailing, spacing: FuelSpacing.xxxs) {
-                Text("Best")
-                    .font(FuelTypography.caption)
-                    .foregroundStyle(FuelColors.textTertiary)
-
-                Text("\(longestStreak)")
-                    .font(FuelTypography.headline)
-                    .foregroundStyle(FuelColors.textSecondary)
-            }
+            // Chevron
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(FuelColors.textTertiary)
         }
         .padding(FuelSpacing.md)
-        .background(
-            LinearGradient(
-                colors: [
-                    FuelColors.gold.opacity(0.1),
-                    FuelColors.gold.opacity(0.05)
-                ],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-        )
-        .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
-        .overlay(
-            RoundedRectangle(cornerRadius: FuelSpacing.radiusMd)
-                .stroke(FuelColors.gold.opacity(0.3), lineWidth: 1)
-        )
-        .onAppear {
-            withAnimation(
-                Animation.easeInOut(duration: 1.5)
-                    .repeatForever(autoreverses: true)
-            ) {
-                isAnimating = true
-            }
-            FuelHaptics.shared.streak()
-        }
+        .background(FuelColors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusLg))
+        .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
     }
 }
 

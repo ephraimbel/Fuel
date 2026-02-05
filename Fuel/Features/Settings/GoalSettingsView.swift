@@ -1,10 +1,12 @@
 import SwiftUI
+import SwiftData
 
 /// Goal Settings View
 /// Edit calorie and macro targets
 
 struct GoalSettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
 
     @State private var calorieGoal: Double = 2000
     @State private var proteinGoal: Double = 150
@@ -17,6 +19,7 @@ struct GoalSettingsView: View {
 
     @State private var usePercentages = false
     @State private var hasChanges = false
+    @State private var isLoaded = false
 
     var body: some View {
         ScrollView {
@@ -46,6 +49,28 @@ struct GoalSettingsView: View {
                 }
             }
         }
+        .onAppear {
+            loadUserGoals()
+        }
+    }
+
+    // MARK: - Data Loading
+
+    private func loadUserGoals() {
+        guard !isLoaded else { return }
+
+        let descriptor = FetchDescriptor<User>()
+        guard let user = try? modelContext.fetch(descriptor).first else { return }
+
+        calorieGoal = Double(user.dailyCalorieTarget)
+        proteinGoal = Double(user.dailyProteinTarget)
+        carbsGoal = Double(user.dailyCarbsTarget)
+        fatGoal = Double(user.dailyFatTarget)
+
+        // Calculate initial percentages
+        updatePercentageFromGrams()
+
+        isLoaded = true
     }
 
     // MARK: - Calorie Goal Section
@@ -352,9 +377,30 @@ struct GoalSettingsView: View {
     }
 
     private func saveGoals() {
-        FuelHaptics.shared.success()
-        // TODO: Save goals via service
-        hasChanges = false
+        let descriptor = FetchDescriptor<User>()
+        guard let user = try? modelContext.fetch(descriptor).first else {
+            FuelHaptics.shared.error()
+            return
+        }
+
+        // Update user goals
+        user.dailyCalorieTarget = Int(calorieGoal)
+        user.dailyProteinTarget = Int(proteinGoal)
+        user.dailyCarbsTarget = Int(carbsGoal)
+        user.dailyFatTarget = Int(fatGoal)
+        user.lastActiveAt = Date()
+
+        // Persist changes
+        do {
+            try modelContext.save()
+            hasChanges = false
+            FuelHaptics.shared.success()
+        } catch {
+            FuelHaptics.shared.error()
+            #if DEBUG
+            print("Failed to save goals: \(error)")
+            #endif
+        }
     }
 }
 

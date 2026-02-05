@@ -35,13 +35,14 @@ struct RootView: View {
             get: { appState.showPaywall },
             set: { appState.showPaywall = $0 }
         )) {
-            PaywallView()
+            PaywallView(context: appState.paywallContext)
         }
         .fullScreenCover(isPresented: Binding(
             get: { appState.showCamera },
             set: { appState.showCamera = $0 }
         )) {
-            CameraCaptureView()
+            FoodScannerView()
+                .environment(appState)
         }
     }
 
@@ -67,9 +68,6 @@ struct RootView: View {
     // MARK: - Initialization
 
     private func initializeApp() async {
-        // Simulate initial load
-        try? await Task.sleep(nanoseconds: 1_500_000_000)
-
         // Check authentication state
         AuthService.shared.checkExistingCredentials()
 
@@ -81,17 +79,25 @@ struct RootView: View {
             await loadUserData()
         }
 
+        // Ensure minimum display time for launch screen (for smooth UX)
+        // This is intentionally short - just enough to prevent jarring transitions
+        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+
         // Complete loading
         await MainActor.run {
             withAnimation(FuelAnimations.spring) {
                 isLoading = false
             }
+
+            // Check if trial just ended (after loading completes)
+            appState.checkTrialStatus()
         }
     }
 
     private func loadUserData() async {
-        // In production, fetch user data from SwiftData
-        // This is a placeholder
+        // Load user profile from SwiftData
+        // The user data is already available through the modelContext
+        // Additional async loading (like remote sync) would go here
     }
 }
 
@@ -158,195 +164,7 @@ struct CameraCaptureView: View {
     }
 }
 
-/// Placeholder for paywall
-struct PaywallView: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var selectedProduct: SubscriptionService.ProductID = .yearlyPremium
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: FuelSpacing.xl) {
-                    // Header
-                    VStack(spacing: FuelSpacing.md) {
-                        Image(systemName: "crown.fill")
-                            .font(.system(size: 60))
-                            .foregroundStyle(FuelColors.gold)
-
-                        Text("Upgrade to Premium")
-                            .font(FuelTypography.title1)
-                            .foregroundStyle(FuelColors.textPrimary)
-
-                        Text("Unlock unlimited AI scans and premium features")
-                            .font(FuelTypography.body)
-                            .foregroundStyle(FuelColors.textSecondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(.top, FuelSpacing.xl)
-
-                    // Features
-                    VStack(alignment: .leading, spacing: FuelSpacing.md) {
-                        featureRow(icon: "camera.viewfinder", text: "Unlimited AI food scans")
-                        featureRow(icon: "chart.xyaxis.line", text: "Advanced analytics")
-                        featureRow(icon: "icloud", text: "Cloud sync across devices")
-                        featureRow(icon: "bell.badge", text: "Smart reminders")
-                        featureRow(icon: "rectangle.stack", text: "Custom recipes")
-                    }
-                    .padding(.horizontal, FuelSpacing.screenHorizontal)
-
-                    // Pricing options
-                    VStack(spacing: FuelSpacing.sm) {
-                        pricingOption(
-                            title: "Yearly",
-                            price: "$49.99/year",
-                            detail: "$4.17/month",
-                            isSelected: selectedProduct == .yearlyPremium,
-                            badge: "Best Value"
-                        ) {
-                            selectedProduct = .yearlyPremium
-                        }
-
-                        pricingOption(
-                            title: "Monthly",
-                            price: "$9.99/month",
-                            detail: nil,
-                            isSelected: selectedProduct == .monthlyPremium
-                        ) {
-                            selectedProduct = .monthlyPremium
-                        }
-
-                        pricingOption(
-                            title: "Lifetime",
-                            price: "$149.99",
-                            detail: "One-time purchase",
-                            isSelected: selectedProduct == .lifetime
-                        ) {
-                            selectedProduct = .lifetime
-                        }
-                    }
-                    .padding(.horizontal, FuelSpacing.screenHorizontal)
-
-                    // Purchase button
-                    FuelButton("Continue") {
-                        Task {
-                            // Purchase flow
-                            FuelHaptics.shared.impact()
-                        }
-                    }
-                    .padding(.horizontal, FuelSpacing.screenHorizontal)
-
-                    // Restore
-                    Button {
-                        FuelHaptics.shared.tap()
-                        Task {
-                            try? await SubscriptionService.shared.restorePurchases()
-                        }
-                    } label: {
-                        Text("Restore Purchases")
-                            .font(FuelTypography.subheadline)
-                            .foregroundStyle(FuelColors.textSecondary)
-                    }
-
-                    // Terms
-                    Text("Cancel anytime. Terms apply.")
-                        .font(FuelTypography.caption)
-                        .foregroundStyle(FuelColors.textTertiary)
-                        .padding(.bottom, FuelSpacing.xl)
-                }
-            }
-            .background(FuelColors.background)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        FuelHaptics.shared.tap()
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(FuelColors.textSecondary)
-                    }
-                }
-            }
-        }
-    }
-
-    private func featureRow(icon: String, text: String) -> some View {
-        HStack(spacing: FuelSpacing.sm) {
-            Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundStyle(FuelColors.primary)
-                .frame(width: 28)
-
-            Text(text)
-                .font(FuelTypography.body)
-                .foregroundStyle(FuelColors.textPrimary)
-        }
-    }
-
-    private func pricingOption(
-        title: String,
-        price: String,
-        detail: String?,
-        isSelected: Bool,
-        badge: String? = nil,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button {
-            FuelHaptics.shared.select()
-            action()
-        } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: FuelSpacing.xxxs) {
-                    HStack {
-                        Text(title)
-                            .font(FuelTypography.headline)
-                            .foregroundStyle(FuelColors.textPrimary)
-
-                        if let badge {
-                            Text(badge)
-                                .font(FuelTypography.caption)
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, FuelSpacing.xs)
-                                .padding(.vertical, FuelSpacing.xxxs)
-                                .background(FuelColors.success)
-                                .clipShape(Capsule())
-                        }
-                    }
-
-                    if let detail {
-                        Text(detail)
-                            .font(FuelTypography.caption)
-                            .foregroundStyle(FuelColors.textSecondary)
-                    }
-                }
-
-                Spacer()
-
-                Text(price)
-                    .font(FuelTypography.headline)
-                    .foregroundStyle(FuelColors.textPrimary)
-
-                Circle()
-                    .stroke(isSelected ? FuelColors.primary : FuelColors.border, lineWidth: 2)
-                    .frame(width: 24, height: 24)
-                    .overlay(
-                        Circle()
-                            .fill(isSelected ? FuelColors.primary : .clear)
-                            .frame(width: 16, height: 16)
-                    )
-            }
-            .padding(FuelSpacing.md)
-            .background(isSelected ? FuelColors.primaryLight : FuelColors.surface)
-            .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
-            .overlay(
-                RoundedRectangle(cornerRadius: FuelSpacing.radiusMd)
-                    .stroke(isSelected ? FuelColors.primary : FuelColors.border, lineWidth: isSelected ? 2 : 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-}
+// Note: PaywallView is now in /Fuel/Features/Subscription/PaywallView.swift
 
 #Preview {
     RootView()

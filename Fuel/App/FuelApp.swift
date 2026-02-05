@@ -1,18 +1,24 @@
 import SwiftUI
 import SwiftData
+import OSLog
 
 /// Fuel - AI-Powered Calorie Tracker
 /// Main application entry point
+
+private let logger = Logger(subsystem: "com.fuel.app", category: "App")
 
 @main
 struct FuelApp: App {
     // MARK: - State
 
     @State private var appState = AppState()
+    @State private var initializationError: Error?
 
     // MARK: - Model Container
 
-    var modelContainer: ModelContainer = {
+    let modelContainer: ModelContainer?
+
+    init() {
         let schema = Schema([
             User.self,
             Meal.self,
@@ -27,22 +33,100 @@ struct FuelApp: App {
             cloudKitDatabase: .automatic
         )
 
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+        // Try primary storage first, then fallback to in-memory
+        if let container = try? ModelContainer(for: schema, configurations: [modelConfiguration]) {
+            self.modelContainer = container
+            logger.info("ModelContainer initialized successfully")
+        } else {
+            logger.error("Failed to create ModelContainer with persistent storage")
+            // Try fallback with in-memory storage
+            let fallbackConfig = ModelConfiguration(
+                schema: schema,
+                isStoredInMemoryOnly: true
+            )
+            if let fallbackContainer = try? ModelContainer(for: schema, configurations: [fallbackConfig]) {
+                self.modelContainer = fallbackContainer
+                logger.warning("Using in-memory fallback storage")
+            } else {
+                logger.critical("Failed to create any ModelContainer")
+                self.modelContainer = nil
+            }
         }
-    }()
+    }
 
     // MARK: - Body
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environment(appState)
-                .withToasts()
+            if let container = modelContainer {
+                RootView()
+                    .environment(appState)
+                    .withToasts()
+                    .modelContainer(container)
+            } else {
+                DatabaseErrorView {
+                    // Attempt recovery by resetting the app
+                    resetAppData()
+                }
+            }
         }
-        .modelContainer(modelContainer)
+    }
+
+    // MARK: - Recovery
+
+    private func resetAppData() {
+        // Clear UserDefaults
+        if let bundleID = Bundle.main.bundleIdentifier {
+            UserDefaults.standard.removePersistentDomain(forName: bundleID)
+        }
+
+        // Log the reset attempt
+        logger.info("App data reset attempted")
+
+        // The user would need to restart the app
+    }
+}
+
+// MARK: - Database Error View
+
+struct DatabaseErrorView: View {
+    let onRetry: () -> Void
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 64))
+                .foregroundStyle(.orange)
+
+            Text("Unable to Start")
+                .font(.title.bold())
+
+            Text("There was a problem initializing the app's database. This may be due to a storage issue or corrupted data.")
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+
+            VStack(spacing: 12) {
+                Button {
+                    onRetry()
+                } label: {
+                    Text("Reset App Data")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(.red)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+
+                Text("This will clear all local data. You may need to restart the app.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 32)
+        }
+        .padding()
     }
 }
 
@@ -55,7 +139,9 @@ final class AppState {
     var selectedTab: Tab = .home
     var showOnboarding = false
     var showPaywall = false
+    var paywallContext: PaywallContext = .general
     var showCamera = false
+    var showAddMealSheet = false
 
     // MARK: - User
 
@@ -97,22 +183,32 @@ final class AppState {
         UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
         showOnboarding = true
     }
+
+    /// Check if trial just ended and show paywall
+    func checkTrialStatus() {
+        if FeatureGateService.shared.trialJustEnded {
+            paywallContext = .trialEnded
+            showPaywall = true
+        }
+    }
+
+    /// Show paywall with specific context
+    func showPaywall(context: PaywallContext) {
+        paywallContext = context
+        showPaywall = true
+    }
 }
 
 // MARK: - Tabs
 
 enum Tab: String, CaseIterable {
     case home
-    case search
-    case add
     case progress
     case profile
 
     var title: String {
         switch self {
         case .home: return "Home"
-        case .search: return "Search"
-        case .add: return "Add"
         case .progress: return "Progress"
         case .profile: return "Profile"
         }
@@ -121,9 +217,7 @@ enum Tab: String, CaseIterable {
     var icon: String {
         switch self {
         case .home: return "house"
-        case .search: return "magnifyingglass"
-        case .add: return "plus.circle"
-        case .progress: return "chart.bar"
+        case .progress: return "chart.line.uptrend.xyaxis"
         case .profile: return "person"
         }
     }
@@ -131,9 +225,7 @@ enum Tab: String, CaseIterable {
     var selectedIcon: String {
         switch self {
         case .home: return "house.fill"
-        case .search: return "magnifyingglass"
-        case .add: return "plus.circle.fill"
-        case .progress: return "chart.bar.fill"
+        case .progress: return "chart.line.uptrend.xyaxis"
         case .profile: return "person.fill"
         }
     }

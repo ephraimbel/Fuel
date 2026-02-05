@@ -13,13 +13,18 @@ public final class SubscriptionService {
     // MARK: - Product IDs
 
     public enum ProductID: String, CaseIterable {
-        case weeklyPremium = "com.fuel.premium.weekly"
         case monthlyPremium = "com.fuel.premium.monthly"
         case yearlyPremium = "com.fuel.premium.yearly"
-        case lifetime = "com.fuel.premium.lifetime"
 
         var isSubscription: Bool {
-            self != .lifetime
+            true
+        }
+
+        var displayName: String {
+            switch self {
+            case .monthlyPremium: return "Monthly"
+            case .yearlyPremium: return "Yearly"
+            }
         }
     }
 
@@ -34,7 +39,7 @@ public final class SubscriptionService {
     // MARK: - Computed
 
     public var isPremium: Bool {
-        subscriptionStatus == .premium || subscriptionStatus == .lifetime
+        subscriptionStatus == .premium || FeatureGateService.shared.isInTrial
     }
 
     public var hasActiveSubscription: Bool {
@@ -147,13 +152,28 @@ public final class SubscriptionService {
     private func listenForTransactions() -> Task<Void, Error> {
         Task.detached { [weak self] in
             for await result in Transaction.updates {
-                do {
-                    let transaction = try self?.checkVerified(result)
-                    await self?.updateSubscriptionStatus()
-                    await transaction?.finish()
-                } catch {
-                    print("Transaction verification failed: \(error)")
+                // If self is deallocated, we still need to finish the transaction
+                // to prevent it from being stuck in a pending state
+
+                // Verify transaction regardless of self
+                let transaction: Transaction
+                switch result {
+                case .unverified:
+                    #if DEBUG
+                    print("Skipping unverified transaction")
+                    #endif
+                    continue  // Skip unverified transactions
+                case .verified(let verifiedTransaction):
+                    transaction = verifiedTransaction
                 }
+
+                // Update status if self is still alive
+                if let self = self {
+                    await self.updateSubscriptionStatus()
+                }
+
+                // Always finish the transaction to prevent stuck state
+                await transaction.finish()
             }
         }
     }
@@ -182,9 +202,7 @@ public final class SubscriptionService {
         purchasedProductIDs = newPurchasedIDs
 
         // Determine subscription status
-        if purchasedProductIDs.contains(ProductID.lifetime.rawValue) {
-            subscriptionStatus = .lifetime
-        } else if !purchasedProductIDs.isEmpty {
+        if !purchasedProductIDs.isEmpty {
             subscriptionStatus = .premium
         } else {
             subscriptionStatus = .none
@@ -197,21 +215,24 @@ public final class SubscriptionService {
 public enum SubscriptionStatus: String {
     case none
     case premium
-    case lifetime
 
     public var displayName: String {
         switch self {
         case .none: return "Free"
-        case .premium: return "Premium"
-        case .lifetime: return "Lifetime"
+        case .premium: return "Fuel+"
         }
     }
 
-    public var aiScansPerDay: Int {
+    public var aiScansPerWeek: Int {
         switch self {
         case .none: return 3
-        case .premium, .lifetime: return .max
+        case .premium: return .max
         }
+    }
+
+    /// Whether user has full access (premium features)
+    public var hasFullAccess: Bool {
+        self == .premium
     }
 }
 

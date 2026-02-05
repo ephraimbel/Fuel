@@ -154,9 +154,9 @@ public struct BounceEffect: ViewModifier {
 
 /// Shake effect for errors
 public struct ShakeEffect: GeometryEffect {
-    var amount: CGFloat = 10
-    var shakesPerUnit = 3
-    var animatableData: CGFloat
+    public var amount: CGFloat = 10
+    public var shakesPerUnit = 3
+    public var animatableData: CGFloat
 
     public func effectValue(size: CGSize) -> ProjectionTransform {
         ProjectionTransform(

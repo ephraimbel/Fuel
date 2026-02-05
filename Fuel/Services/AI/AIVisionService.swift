@@ -13,10 +13,17 @@ public final class AIVisionService {
     // MARK: - Configuration
 
     private let apiEndpoint = "https://api.openai.com/v1/chat/completions"
-    private let model = "gpt-4-vision-preview"
+    private let model = "gpt-4o"
+
+    // MARK: - API Key
+
     private var apiKey: String {
-        // In production, fetch from secure storage or environment
-        ProcessInfo.processInfo.environment["OPENAI_API_KEY"] ?? ""
+        Secrets.openAIAPIKey
+    }
+
+    /// Check if the service is properly configured
+    public var isConfigured: Bool {
+        Secrets.isOpenAIConfigured
     }
 
     // MARK: - State
@@ -31,6 +38,7 @@ public final class AIVisionService {
     // MARK: - Analysis
 
     /// Analyze a food photo and return estimated nutrition
+    @MainActor
     public func analyzeFood(image: UIImage) async throws -> FoodAnalysisResult {
         guard !apiKey.isEmpty else {
             throw AIVisionError.apiKeyMissing
@@ -41,8 +49,10 @@ public final class AIVisionService {
 
         defer { isAnalyzing = false }
 
-        // Resize image for API
-        let resizedImage = resizeImage(image, maxDimension: 1024)
+        // Resize image for API (can be done off main thread for performance)
+        let resizedImage = await Task.detached(priority: .userInitiated) {
+            self.resizeImage(image, maxDimension: 1024)
+        }.value
 
         guard let imageData = resizedImage.jpegData(compressionQuality: 0.8) else {
             throw AIVisionError.imageProcessingFailed
@@ -53,19 +63,8 @@ public final class AIVisionService {
         // Build request
         let request = try buildRequest(base64Image: base64Image)
 
-        // Make API call
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw AIVisionError.invalidResponse
-        }
-
-        guard httpResponse.statusCode == 200 else {
-            if httpResponse.statusCode == 429 {
-                throw AIVisionError.rateLimited
-            }
-            throw AIVisionError.apiError(statusCode: httpResponse.statusCode)
-        }
+        // Make API call with retry logic
+        let (data, _) = try await performRequestWithRetry(request, maxRetries: 3)
 
         // Parse response
         let result = try parseResponse(data)
@@ -73,7 +72,59 @@ public final class AIVisionService {
         return result
     }
 
+    /// Perform API request with exponential backoff retry
+    private func performRequestWithRetry(_ request: URLRequest, maxRetries: Int) async throws -> (Data, URLResponse) {
+        var lastError: Error?
+
+        for attempt in 0..<maxRetries {
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request)
+
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw AIVisionError.invalidResponse
+                }
+
+                switch httpResponse.statusCode {
+                case 200:
+                    return (data, response)
+                case 429:
+                    // Rate limited - wait and retry
+                    if attempt < maxRetries - 1 {
+                        let delay = pow(2.0, Double(attempt)) // Exponential backoff: 1s, 2s, 4s
+                        try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                        continue
+                    }
+                    throw AIVisionError.rateLimited
+                case 401:
+                    throw AIVisionError.apiKeyMissing
+                case 500...599:
+                    // Server error - retry
+                    if attempt < maxRetries - 1 {
+                        let delay = pow(2.0, Double(attempt))
+                        try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                        continue
+                    }
+                    throw AIVisionError.apiError(statusCode: httpResponse.statusCode)
+                default:
+                    throw AIVisionError.apiError(statusCode: httpResponse.statusCode)
+                }
+            } catch let error as AIVisionError {
+                throw error
+            } catch {
+                lastError = error
+                if attempt < maxRetries - 1 {
+                    let delay = pow(2.0, Double(attempt))
+                    try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                    continue
+                }
+            }
+        }
+
+        throw AIVisionError.networkError(lastError ?? NSError(domain: "AIVision", code: -1))
+    }
+
     /// Analyze multiple food items in a single image
+    @MainActor
     public func analyzeMeal(image: UIImage) async throws -> MealAnalysisResult {
         let foodResult = try await analyzeFood(image: image)
 
@@ -104,12 +155,19 @@ public final class AIVisionService {
 
         let prompt = """
         Analyze this food image and identify all visible food items. For each item, estimate:
-        1. Name of the food item
-        2. Estimated serving size (in grams or common units)
-        3. Calories
-        4. Protein (g)
-        5. Carbohydrates (g)
-        6. Fat (g)
+
+        MACRONUTRIENTS:
+        - Calories
+        - Protein (g)
+        - Carbohydrates (g)
+        - Fat (g)
+
+        MICRONUTRIENTS:
+        - Fiber (g)
+        - Sugar (g)
+        - Sodium (mg)
+        - Saturated Fat (g)
+        - Cholesterol (mg)
 
         Also provide:
         - Your confidence level (0-100%) in the analysis
@@ -124,7 +182,12 @@ public final class AIVisionService {
                     "calories": 150,
                     "protein": 10.0,
                     "carbs": 20.0,
-                    "fat": 5.0
+                    "fat": 5.0,
+                    "fiber": 3.0,
+                    "sugar": 5.0,
+                    "sodium": 200,
+                    "saturated_fat": 2.0,
+                    "cholesterol": 15
                 }
             ],
             "confidence": 85,
@@ -195,6 +258,11 @@ public final class AIVisionService {
                 let protein: Double
                 let carbs: Double
                 let fat: Double
+                let fiber: Double?
+                let sugar: Double?
+                let sodium: Double?
+                let saturated_fat: Double?
+                let cholesterol: Double?
             }
             let items: [Item]
             let confidence: Int
@@ -211,7 +279,12 @@ public final class AIVisionService {
                 calories: item.calories,
                 protein: item.protein,
                 carbs: item.carbs,
-                fat: item.fat
+                fat: item.fat,
+                fiber: item.fiber,
+                sugar: item.sugar,
+                sodium: item.sodium,
+                saturatedFat: item.saturated_fat,
+                cholesterol: item.cholesterol
             )
         }
 
@@ -246,12 +319,11 @@ public final class AIVisionService {
 
         let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
 
-        UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
-        image.draw(in: CGRect(origin: .zero, size: newSize))
-        let resizedImage = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-
-        return resizedImage ?? image
+        // Use modern thread-safe UIGraphicsImageRenderer
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
     }
 }
 
@@ -285,6 +357,13 @@ public struct AnalyzedFoodItem: Identifiable {
     public let carbs: Double
     public let fat: Double
 
+    // Micronutrients
+    public let fiber: Double?
+    public let sugar: Double?
+    public let sodium: Double?
+    public let saturatedFat: Double?
+    public let cholesterol: Double?
+
     /// Convert to FoodItem model
     public func toFoodItem() -> FoodItem {
         // Parse serving size
@@ -299,6 +378,11 @@ public struct AnalyzedFoodItem: Identifiable {
             protein: protein,
             carbs: carbs,
             fat: fat,
+            fiber: fiber,
+            sugar: sugar,
+            sodium: sodium,
+            saturatedFat: saturatedFat,
+            cholesterol: cholesterol,
             source: .aiScan
         )
     }

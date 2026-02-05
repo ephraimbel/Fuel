@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import PhotosUI
 
 /// Profile Settings View
@@ -6,14 +7,16 @@ import PhotosUI
 
 struct ProfileSettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
 
-    @State private var displayName = "John Doe"
-    @State private var email = "john@example.com"
+    @State private var displayName = ""
+    @State private var email = ""
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var profileImage: UIImage?
     @State private var showingImagePicker = false
     @State private var isSaving = false
     @State private var hasChanges = false
+    @State private var isLoaded = false
 
     var body: some View {
         ScrollView {
@@ -50,6 +53,30 @@ struct ProfileSettingsView: View {
         .onChange(of: selectedPhoto) { _, item in
             loadImage(from: item)
         }
+        .onAppear {
+            loadUserData()
+        }
+    }
+
+    // MARK: - Data Loading
+
+    private func loadUserData() {
+        guard !isLoaded else { return }
+
+        let descriptor = FetchDescriptor<User>()
+        guard let user = try? modelContext.fetch(descriptor).first else { return }
+
+        displayName = user.name
+        email = user.email ?? ""
+
+        // Load profile image from avatar URL if it's a local file path
+        if let avatarPath = user.avatarURL,
+           let imageData = FileManager.default.contents(atPath: avatarPath),
+           let image = UIImage(data: imageData) {
+            profileImage = image
+        }
+
+        isLoaded = true
     }
 
     // MARK: - Profile Photo Section
@@ -250,11 +277,52 @@ struct ProfileSettingsView: View {
         isSaving = true
         FuelHaptics.shared.tap()
 
-        // TODO: Save profile via service
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        let descriptor = FetchDescriptor<User>()
+        guard let user = try? modelContext.fetch(descriptor).first else {
+            isSaving = false
+            FuelHaptics.shared.error()
+            return
+        }
+
+        // Update user name
+        user.name = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        user.lastActiveAt = Date()
+
+        // Save profile image to documents directory
+        if let image = profileImage,
+           let imageData = image.jpegData(compressionQuality: 0.8) {
+            let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+            let avatarPath = documentsPath.appendingPathComponent("profile_avatar.jpg")
+
+            do {
+                try imageData.write(to: avatarPath)
+                user.avatarURL = avatarPath.path
+            } catch {
+                // Log but don't fail the save
+                #if DEBUG
+                print("Failed to save profile image: \(error)")
+                #endif
+            }
+        } else if profileImage == nil {
+            // User removed their profile photo
+            if let existingPath = user.avatarURL {
+                try? FileManager.default.removeItem(atPath: existingPath)
+            }
+            user.avatarURL = nil
+        }
+
+        // Persist changes
+        do {
+            try modelContext.save()
             isSaving = false
             hasChanges = false
             FuelHaptics.shared.success()
+        } catch {
+            isSaving = false
+            FuelHaptics.shared.error()
+            #if DEBUG
+            print("Failed to save profile: \(error)")
+            #endif
         }
     }
 }

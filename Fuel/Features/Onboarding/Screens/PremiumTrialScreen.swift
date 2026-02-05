@@ -7,34 +7,42 @@ struct PremiumTrialScreen: View {
     @Bindable var viewModel: OnboardingViewModel
 
     @State private var selectedPlan: PlanOption = .yearly
+    @State private var isLoading = false
 
     enum PlanOption {
-        case weekly
+        case monthly
         case yearly
     }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: FuelSpacing.lg) {
-                // Header
+                // Header with Fuel+ branding
                 VStack(spacing: FuelSpacing.md) {
-                    // Crown icon
+                    // Flame icon
                     ZStack {
                         Circle()
-                            .fill(FuelColors.goldGradient)
+                            .fill(FuelColors.primaryGradient)
                             .frame(width: 80, height: 80)
 
-                        Image(systemName: "crown.fill")
-                            .font(.system(size: 36))
+                        Image(systemName: "flame.fill")
+                            .font(.system(size: 36, weight: .bold))
                             .foregroundStyle(.white)
                     }
-                    .shadow(color: FuelColors.gold.opacity(0.4), radius: 12, y: 6)
+                    .shadow(color: FuelColors.primary.opacity(0.4), radius: 12, y: 6)
 
-                    Text("Try Fuel Premium Free")
-                        .font(FuelTypography.title1)
-                        .foregroundStyle(FuelColors.textPrimary)
+                    // Fuel+ logo
+                    HStack(spacing: 0) {
+                        Text("Fuel")
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundStyle(FuelColors.textPrimary)
 
-                    Text("Start your 7-day free trial")
+                        Text("+")
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.red)
+                    }
+
+                    Text("Start your 3-day free trial")
                         .font(FuelTypography.body)
                         .foregroundStyle(FuelColors.textSecondary)
                 }
@@ -55,19 +63,19 @@ struct PremiumTrialScreen: View {
                     planCard(
                         plan: .yearly,
                         title: "Yearly",
-                        price: "$49.99/year",
-                        detail: "Just $4.17/month",
-                        badge: "Best Value",
+                        price: "$59.99/year",
+                        detail: "Just $5/month",
+                        badge: "SAVE 62%",
                         isSelected: selectedPlan == .yearly
                     )
 
                     planCard(
-                        plan: .weekly,
-                        title: "Weekly",
-                        price: "$2.99/week",
-                        detail: "Billed weekly",
+                        plan: .monthly,
+                        title: "Monthly",
+                        price: "$12.99/month",
+                        detail: "Billed monthly",
                         badge: nil,
-                        isSelected: selectedPlan == .weekly
+                        isSelected: selectedPlan == .monthly
                     )
                 }
                 .padding(.horizontal, FuelSpacing.screenHorizontal)
@@ -77,7 +85,7 @@ struct PremiumTrialScreen: View {
                     Image(systemName: "checkmark.shield.fill")
                         .foregroundStyle(FuelColors.success)
 
-                    Text("7-day free trial, cancel anytime")
+                    Text("3-day free trial, cancel anytime")
                         .font(FuelTypography.caption)
                         .foregroundStyle(FuelColors.textSecondary)
                 }
@@ -88,11 +96,26 @@ struct PremiumTrialScreen: View {
         }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: FuelSpacing.sm) {
-                FuelButton("Start Free Trial") {
-                    FuelHaptics.shared.impact()
-                    // Start trial flow
-                    viewModel.nextStep()
+                // Primary CTA
+                Button {
+                    startTrial()
+                } label: {
+                    HStack(spacing: FuelSpacing.sm) {
+                        if isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(0.9)
+                        }
+                        Text("Start 3-Day Free Trial")
+                            .font(FuelTypography.headline)
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, FuelSpacing.md)
+                    .background(FuelColors.primary)
+                    .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
                 }
+                .disabled(isLoading)
 
                 Button {
                     FuelHaptics.shared.tap()
@@ -104,7 +127,7 @@ struct PremiumTrialScreen: View {
                 }
 
                 // Legal
-                Text("Payment will be charged after trial ends. Cancel anytime in Settings.")
+                Text("After your free trial, you'll be charged \(selectedPlan == .yearly ? "$59.99/year" : "$12.99/month"). Cancel anytime.")
                     .font(FuelTypography.caption)
                     .foregroundStyle(FuelColors.textTertiary)
                     .multilineTextAlignment(.center)
@@ -112,6 +135,41 @@ struct PremiumTrialScreen: View {
             .padding(.horizontal, FuelSpacing.screenHorizontal)
             .padding(.vertical, FuelSpacing.lg)
             .background(FuelColors.background)
+        }
+    }
+
+    // MARK: - Actions
+
+    private func startTrial() {
+        FuelHaptics.shared.impact()
+        isLoading = true
+
+        Task {
+            // Start the trial
+            FeatureGateService.shared.startTrial()
+
+            // Get the appropriate product
+            let productID: SubscriptionService.ProductID = selectedPlan == .yearly
+                ? .yearlyPremium
+                : .monthlyPremium
+
+            if let product = SubscriptionService.shared.product(for: productID) {
+                do {
+                    _ = try await SubscriptionService.shared.purchase(product)
+                } catch SubscriptionError.userCancelled {
+                    // User cancelled, still continue with trial
+                } catch {
+                    // Purchase failed, still continue with trial
+                    #if DEBUG
+                    print("Purchase error: \(error)")
+                    #endif
+                }
+            }
+
+            await MainActor.run {
+                isLoading = false
+                viewModel.nextStep()
+            }
         }
     }
 

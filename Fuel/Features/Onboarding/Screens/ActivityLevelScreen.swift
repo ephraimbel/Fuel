@@ -89,20 +89,6 @@ struct ActivityLevelCard: View {
     }
 }
 
-// MARK: - Activity Level Extension
-
-extension ActivityLevel {
-    var icon: String {
-        switch self {
-        case .sedentary: return "figure.seated.side"
-        case .light: return "figure.walk"
-        case .moderate: return "figure.run"
-        case .active: return "figure.hiking"
-        case .veryActive: return "figure.highintensity.intervaltraining"
-        }
-    }
-}
-
 #Preview {
     ActivityLevelScreen(viewModel: OnboardingViewModel())
 }

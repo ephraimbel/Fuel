@@ -120,12 +120,10 @@ struct CameraView: View {
     // MARK: - Guidance Overlay
 
     private var guidanceOverlay: some View {
-        VStack(spacing: FuelSpacing.md) {
-            // Scanning frame
-            RoundedRectangle(cornerRadius: FuelSpacing.radiusLg, style: .continuous)
-                .stroke(style: StrokeStyle(lineWidth: 3, dash: [10, 5]))
-                .foregroundStyle(.white.opacity(0.6))
-                .frame(width: 280, height: 280)
+        VStack(spacing: FuelSpacing.lg) {
+            // Scanning frame with red corner brackets
+            ScannerFrameView(size: 280, cornerLength: 40, lineWidth: 4)
+                .foregroundStyle(FuelColors.primary)
 
             // Instructions
             VStack(spacing: FuelSpacing.xs) {

@@ -63,17 +63,32 @@ public final class FoodItem {
         protein: Double = 0,
         carbs: Double = 0,
         fat: Double = 0,
+        fiber: Double? = nil,
+        sugar: Double? = nil,
+        sodium: Double? = nil,
+        saturatedFat: Double? = nil,
+        cholesterol: Double? = nil,
         source: FoodSource = .manual
     ) {
         self.id = id
-        self.name = name
-        self.servingSize = servingSize
-        self.servingUnit = servingUnit
-        self.numberOfServings = numberOfServings
-        self.caloriesPerServing = calories
-        self.proteinPerServing = protein
-        self.carbsPerServing = carbs
-        self.fatPerServing = fat
+        self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Validate non-negative values
+        self.servingSize = max(0.1, servingSize)
+        self.servingUnit = servingUnit.isEmpty ? "g" : servingUnit
+        self.numberOfServings = max(0.25, numberOfServings)
+
+        // Validate nutrition values (must be non-negative)
+        self.caloriesPerServing = max(0, calories)
+        self.proteinPerServing = max(0, protein)
+        self.carbsPerServing = max(0, carbs)
+        self.fatPerServing = max(0, fat)
+        self.fiberPerServing = fiber.map { max(0, $0) }
+        self.sugarPerServing = sugar.map { max(0, $0) }
+        self.sodiumPerServing = sodium.map { max(0, $0) }
+        self.saturatedFatPerServing = saturatedFat.map { max(0, $0) }
+        self.cholesterolPerServing = cholesterol.map { max(0, $0) }
+
         self.source = source
         self.isVerified = false
         self.isCustom = source == .manual

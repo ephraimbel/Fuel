@@ -1,10 +1,12 @@
 import SwiftUI
+import SwiftData
 
 /// Personal Info Settings View
 /// Edit height, weight, and activity level
 
 struct PersonalInfoSettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
 
     @State private var heightCm: Double = 175
     @State private var weightKg: Double = 75
@@ -14,6 +16,7 @@ struct PersonalInfoSettingsView: View {
 
     @State private var useMetric = true
     @State private var hasChanges = false
+    @State private var isLoaded = false
 
     var body: some View {
         ScrollView {
@@ -46,6 +49,34 @@ struct PersonalInfoSettingsView: View {
                 }
             }
         }
+        .onAppear {
+            loadUserInfo()
+        }
+    }
+
+    // MARK: - Data Loading
+
+    private func loadUserInfo() {
+        guard !isLoaded else { return }
+
+        let descriptor = FetchDescriptor<User>()
+        guard let user = try? modelContext.fetch(descriptor).first else { return }
+
+        heightCm = user.heightCm
+        weightKg = user.currentWeightKg
+        activityLevel = user.activityLevel
+        gender = user.gender
+
+        // Calculate birth year from birthDate
+        if let birthDate = user.birthDate {
+            let calendar = Calendar.current
+            birthYear = calendar.component(.year, from: birthDate)
+        }
+
+        // Set unit preference
+        useMetric = user.preferredUnits == .metric
+
+        isLoaded = true
     }
 
     // MARK: - Basic Info Section
@@ -297,74 +328,45 @@ struct PersonalInfoSettingsView: View {
     // MARK: - Actions
 
     private func saveInfo() {
-        FuelHaptics.shared.success()
-        // TODO: Save info and recalculate goals
-        hasChanges = false
-    }
-}
-
-// MARK: - Activity Level
-
-enum ActivityLevel: String, CaseIterable {
-    case sedentary
-    case light
-    case moderate
-    case active
-    case veryActive
-
-    var displayName: String {
-        switch self {
-        case .sedentary: return "Sedentary"
-        case .light: return "Lightly Active"
-        case .moderate: return "Moderately Active"
-        case .active: return "Active"
-        case .veryActive: return "Very Active"
+        let descriptor = FetchDescriptor<User>()
+        guard let user = try? modelContext.fetch(descriptor).first else {
+            FuelHaptics.shared.error()
+            return
         }
-    }
 
-    var description: String {
-        switch self {
-        case .sedentary: return "Little to no exercise"
-        case .light: return "Light exercise 1-3 days/week"
-        case .moderate: return "Moderate exercise 3-5 days/week"
-        case .active: return "Hard exercise 6-7 days/week"
-        case .veryActive: return "Very hard exercise, physical job"
-        }
-    }
+        // Update personal info
+        user.heightCm = heightCm
+        user.currentWeightKg = weightKg
+        user.activityLevel = activityLevel
+        user.gender = gender
+        user.preferredUnits = useMetric ? .metric : .imperial
+        user.lastActiveAt = Date()
 
-    var icon: String {
-        switch self {
-        case .sedentary: return "figure.stand"
-        case .light: return "figure.walk"
-        case .moderate: return "figure.run"
-        case .active: return "figure.highintensity.intervaltraining"
-        case .veryActive: return "flame.fill"
-        }
-    }
+        // Convert birth year to birth date (January 1st of that year)
+        let calendar = Calendar.current
+        var components = DateComponents()
+        components.year = birthYear
+        components.month = 1
+        components.day = 1
+        user.birthDate = calendar.date(from: components)
 
-    var multiplier: Double {
-        switch self {
-        case .sedentary: return 1.2
-        case .light: return 1.375
-        case .moderate: return 1.55
-        case .active: return 1.725
-        case .veryActive: return 1.9
-        }
-    }
-}
+        // Recalculate TDEE and goals based on new personal info
+        user.dailyCalorieTarget = user.calculateCalorieTarget()
+        let macros = user.calculateMacroTargets()
+        user.dailyProteinTarget = macros.protein
+        user.dailyCarbsTarget = macros.carbs
+        user.dailyFatTarget = macros.fat
 
-// MARK: - Gender
-
-enum Gender: String, CaseIterable {
-    case male
-    case female
-    case other
-
-    var displayName: String {
-        switch self {
-        case .male: return "Male"
-        case .female: return "Female"
-        case .other: return "Other"
+        // Persist changes
+        do {
+            try modelContext.save()
+            hasChanges = false
+            FuelHaptics.shared.success()
+        } catch {
+            FuelHaptics.shared.error()
+            #if DEBUG
+            print("Failed to save personal info: \(error)")
+            #endif
         }
     }
 }

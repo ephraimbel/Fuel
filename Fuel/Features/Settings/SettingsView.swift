@@ -1,17 +1,21 @@
 import SwiftUI
+import SwiftData
 
 /// Settings View
 /// Main settings screen with all app configuration options
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+
     @State private var showingSignOutAlert = false
     @State private var showingDeleteAccountAlert = false
+    @State private var isProcessing = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: FuelSpacing.lg) {
+                VStack(spacing: FuelSpacing.sectionSpacing) {
                     // Profile section
                     profileSection
 
@@ -37,8 +41,9 @@ struct SettingsView: View {
                     appInfoSection
                 }
                 .padding(.horizontal, FuelSpacing.screenHorizontal)
-                .padding(.vertical, FuelSpacing.lg)
+                .padding(.bottom, FuelSpacing.screenBottom)
             }
+            .scrollIndicators(.hidden)
             .background(FuelColors.background)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -106,7 +111,7 @@ struct SettingsView: View {
             } label: {
                 SettingsRow(
                     icon: "figure.stand",
-                    iconColor: FuelColors.secondary,
+                    iconColor: FuelColors.textSecondary,
                     title: "Personal Info",
                     subtitle: "Height, weight, activity"
                 )
@@ -311,13 +316,83 @@ struct SettingsView: View {
     // MARK: - Actions
 
     private func signOut() {
+        guard !isProcessing else { return }
+        isProcessing = true
         FuelHaptics.shared.tap()
-        // TODO: Implement sign out via AuthService
+
+        // Sign out from auth service
+        AuthService.shared.signOut()
+
+        isProcessing = false
+        // Post notification to reset app state to onboarding
+        NotificationCenter.default.post(name: .userDidSignOut, object: nil)
+        dismiss()
     }
 
     private func deleteAccount() {
+        guard !isProcessing else { return }
+        isProcessing = true
         FuelHaptics.shared.heavy()
-        // TODO: Implement account deletion
+
+        // First, sign out from auth
+        AuthService.shared.signOut()
+
+        // Delete all user data from SwiftData
+        deleteAllUserData()
+
+        isProcessing = false
+        // Post notification to reset app state to onboarding
+        NotificationCenter.default.post(name: .userDidDeleteAccount, object: nil)
+        dismiss()
+    }
+
+    private func deleteAllUserData() {
+        // Delete all meals
+        let mealDescriptor = FetchDescriptor<Meal>()
+        if let meals = try? modelContext.fetch(mealDescriptor) {
+            for meal in meals {
+                modelContext.delete(meal)
+            }
+        }
+
+        // Delete all food items
+        let foodDescriptor = FetchDescriptor<FoodItem>()
+        if let foods = try? modelContext.fetch(foodDescriptor) {
+            for food in foods {
+                modelContext.delete(food)
+            }
+        }
+
+        // Delete all weight entries
+        let weightDescriptor = FetchDescriptor<WeightEntry>()
+        if let entries = try? modelContext.fetch(weightDescriptor) {
+            for entry in entries {
+                modelContext.delete(entry)
+            }
+        }
+
+        // Delete all achievements
+        let achievementDescriptor = FetchDescriptor<Achievement>()
+        if let achievements = try? modelContext.fetch(achievementDescriptor) {
+            for achievement in achievements {
+                modelContext.delete(achievement)
+            }
+        }
+
+        // Delete user profile
+        let userDescriptor = FetchDescriptor<User>()
+        if let users = try? modelContext.fetch(userDescriptor) {
+            for user in users {
+                // Delete profile photo if exists
+                if let avatarPath = user.avatarURL {
+                    try? FileManager.default.removeItem(atPath: avatarPath)
+                }
+                modelContext.delete(user)
+            }
+        }
+
+        // Save changes
+        try? modelContext.save()
     }
 
     private func sendFeedback() {
@@ -333,20 +408,42 @@ struct SettingsView: View {
 
 struct SettingsSection<Content: View>: View {
     let title: String
+    let icon: String?
     @ViewBuilder let content: Content
 
+    init(title: String, icon: String? = nil, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.icon = icon
+        self.content = content()
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: FuelSpacing.sm) {
-            Text(title)
-                .font(FuelTypography.caption)
-                .foregroundStyle(FuelColors.textTertiary)
-                .padding(.leading, FuelSpacing.sm)
+        VStack(alignment: .leading, spacing: 0) {
+            // Section header
+            HStack(spacing: FuelSpacing.xs) {
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(FuelColors.textTertiary)
+                }
+
+                Text(title)
+                    .font(FuelTypography.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(FuelColors.textTertiary)
+                    .textCase(.uppercase)
+                    .tracking(0.5)
+
+                Spacer()
+            }
+            .padding(.bottom, FuelSpacing.xs)
 
             VStack(spacing: 0) {
                 content
             }
             .background(FuelColors.surface)
-            .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
+            .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusLg))
+            .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
         }
     }
 }
@@ -396,6 +493,13 @@ struct SettingsRow: View {
         .padding(FuelSpacing.md)
         .contentShape(Rectangle())
     }
+}
+
+// MARK: - Notification Names
+
+extension Notification.Name {
+    static let userDidSignOut = Notification.Name("userDidSignOut")
+    static let userDidDeleteAccount = Notification.Name("userDidDeleteAccount")
 }
 
 // MARK: - Preview

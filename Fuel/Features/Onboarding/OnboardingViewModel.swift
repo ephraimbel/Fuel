@@ -1,7 +1,11 @@
 import SwiftUI
+import SwiftData
+import OSLog
 
 /// Onboarding View Model
 /// Manages state and navigation for the onboarding flow
+
+private let logger = Logger(subsystem: "com.fuel.app", category: "Onboarding")
 
 @Observable
 final class OnboardingViewModel {
@@ -138,9 +142,9 @@ final class OnboardingViewModel {
     // MARK: - Calculation
 
     func calculatePlan() {
-        // Simulate calculation delay
         Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            // Brief delay for animation timing (allows calculating screen to show)
+            try? await Task.sleep(nanoseconds: 800_000_000) // 0.8 seconds
 
             // Calculate TDEE using Mifflin-St Jeor
             let weightKg = currentWeightForCalculation
@@ -192,19 +196,78 @@ final class OnboardingViewModel {
 
     // MARK: - Data Persistence
 
+    /// Save onboarding data to SwiftData User model
+    func saveOnboardingData(to context: ModelContext) {
+        // Check if user already exists
+        let descriptor = FetchDescriptor<User>()
+        let existingUsers = (try? context.fetch(descriptor)) ?? []
+
+        let user: User
+        if let existingUser = existingUsers.first {
+            // Update existing user
+            user = existingUser
+            logger.info("Updating existing user with onboarding data")
+        } else {
+            // Create new user
+            user = User()
+            context.insert(user)
+            logger.info("Creating new user with onboarding data")
+        }
+
+        // Set personal info
+        user.gender = selectedGender
+        user.heightCm = heightForCalculation
+        user.currentWeightKg = currentWeightForCalculation
+        user.targetWeightKg = targetWeightForCalculation
+        user.activityLevel = activityLevel
+        user.fitnessGoal = selectedGoal
+
+        // Set birth date from birth year
+        var components = DateComponents()
+        components.year = birthYear
+        components.month = 1
+        components.day = 1
+        if let birthDate = Calendar.current.date(from: components) {
+            user.birthDate = birthDate
+        }
+
+        // Set calculated goals
+        user.dailyCalorieTarget = calculatedCalories
+        user.dailyProteinTarget = calculatedProtein
+        user.dailyCarbsTarget = calculatedCarbs
+        user.dailyFatTarget = calculatedFat
+
+        // Set preferences
+        user.preferredUnits = useMetricWeight ? .metric : .imperial
+        user.notificationsEnabled = notificationsEnabled
+
+        // Set meal reminder times
+        user.mealReminderTimes = mealReminderTimes.filter { $0.isEnabled }.map { $0.time }
+
+        // Update timestamps
+        user.lastActiveAt = Date()
+
+        // Save context
+        do {
+            try context.save()
+            logger.info("Successfully saved onboarding data to SwiftData")
+        } catch {
+            logger.error("Failed to save onboarding data: \(error.localizedDescription)")
+        }
+
+        // Also save minimal data to UserDefaults as backup/quick access
+        UserDefaults.standard.set(calculatedCalories, forKey: "user.dailyCalorieTarget")
+        UserDefaults.standard.set(calculatedProtein, forKey: "user.dailyProteinTarget")
+        UserDefaults.standard.set(calculatedCarbs, forKey: "user.dailyCarbsTarget")
+        UserDefaults.standard.set(calculatedFat, forKey: "user.dailyFatTarget")
+    }
+
+    /// Legacy method - deprecated, use saveOnboardingData(to:) instead
+    @available(*, deprecated, message: "Use saveOnboardingData(to:) with ModelContext instead")
     func saveOnboardingData() {
-        // This would save to SwiftData in production
-        UserDefaults.standard.set(selectedGoal.rawValue, forKey: "onboarding.goal")
-        UserDefaults.standard.set(selectedGender.rawValue, forKey: "onboarding.gender")
-        UserDefaults.standard.set(birthYear, forKey: "onboarding.birthYear")
-        UserDefaults.standard.set(heightCm, forKey: "onboarding.heightCm")
-        UserDefaults.standard.set(currentWeightKg, forKey: "onboarding.currentWeight")
-        UserDefaults.standard.set(targetWeightKg, forKey: "onboarding.targetWeight")
-        UserDefaults.standard.set(activityLevel.rawValue, forKey: "onboarding.activityLevel")
-        UserDefaults.standard.set(calculatedCalories, forKey: "onboarding.calories")
-        UserDefaults.standard.set(calculatedProtein, forKey: "onboarding.protein")
-        UserDefaults.standard.set(calculatedCarbs, forKey: "onboarding.carbs")
-        UserDefaults.standard.set(calculatedFat, forKey: "onboarding.fat")
+        logger.warning("saveOnboardingData() called without ModelContext - data will not persist to SwiftData")
+        // Only save to UserDefaults as fallback
+        UserDefaults.standard.set(calculatedCalories, forKey: "user.dailyCalorieTarget")
     }
 }
 

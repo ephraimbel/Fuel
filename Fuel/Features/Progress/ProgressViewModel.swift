@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 /// Progress View Model
-/// Manages progress data and analytics
+/// Manages progress data and analytics from SwiftData
 
 @Observable
 final class ProgressViewModel {
@@ -14,16 +14,18 @@ final class ProgressViewModel {
     // MARK: - Weight Data
 
     var weightEntries: [WeightDataPoint] = []
-    var currentWeight: Double = 165.0
-    var startingWeight: Double = 175.0
-    var goalWeight: Double = 155.0
+    var currentWeight: Double = 0
+    var startingWeight: Double = 0
+    var goalWeight: Double = 0
 
     var weightChange: Double {
-        currentWeight - startingWeight
+        guard startingWeight > 0 else { return 0 }
+        return currentWeight - startingWeight
     }
 
     var weightToGoal: Double {
-        currentWeight - goalWeight
+        guard goalWeight > 0 else { return 0 }
+        return currentWeight - goalWeight
     }
 
     var weightProgressPercent: Double {
@@ -33,6 +35,10 @@ final class ProgressViewModel {
         return min(max(lost / totalToLose, 0), 1.0)
     }
 
+    var hasWeightData: Bool {
+        !weightEntries.isEmpty
+    }
+
     // MARK: - Calorie Data
 
     var calorieEntries: [CalorieDataPoint] = []
@@ -40,11 +46,15 @@ final class ProgressViewModel {
     var calorieGoal: Int = 2000
 
     var daysUnderGoal: Int {
-        calorieEntries.filter { $0.calories <= calorieGoal }.count
+        calorieEntries.filter { $0.calories <= calorieGoal && $0.calories > 0 }.count
     }
 
     var daysOverGoal: Int {
         calorieEntries.filter { $0.calories > calorieGoal }.count
+    }
+
+    var hasCalorieData: Bool {
+        calorieEntries.contains { $0.calories > 0 }
     }
 
     // MARK: - Macro Data
@@ -58,96 +68,220 @@ final class ProgressViewModel {
 
     // MARK: - Streak Data
 
-    var currentStreak: Int = 7
-    var longestStreak: Int = 14
-    var totalDaysLogged: Int = 45
+    var currentStreak: Int = 0
+    var longestStreak: Int = 0
+    var totalDaysLogged: Int = 0
 
     // MARK: - Achievements
 
     var recentAchievements: [ProgressAchievement] = []
 
+    // MARK: - Model Context
+
+    private var modelContext: ModelContext?
+
     // MARK: - Initialization
 
-    init() {
+    init() {}
+
+    // MARK: - Setup
+
+    func setup(with context: ModelContext) {
+        self.modelContext = context
         loadData()
     }
 
     // MARK: - Data Loading
 
     func loadData() {
+        guard let context = modelContext else { return }
+
         isLoading = true
 
-        // Simulate loading delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-            self?.loadSampleData()
-            self?.calculateAverages()
-            self?.isLoading = false
-        }
+        // Load user goals
+        loadUserGoals(from: context)
+
+        // Load weight data
+        loadWeightData(from: context)
+
+        // Load calorie/meal data
+        loadCalorieData(from: context)
+
+        // Calculate streaks
+        calculateStreaks(from: context)
+
+        // Load achievements
+        loadAchievements(from: context)
+
+        isLoading = false
     }
 
     func selectTimeRange(_ range: TimeRange) {
         guard range != selectedTimeRange else { return }
         selectedTimeRange = range
-        FuelHaptics.shared.tap()
         loadData()
     }
 
-    private func loadSampleData() {
-        let calendar = Calendar.current
-        let today = Date()
+    // MARK: - Load User Goals
 
-        // Generate weight data
-        weightEntries = (0..<getDaysForRange()).map { daysAgo in
-            let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
-            let weight = 165.0 + Double.random(in: -2...2) + (Double(daysAgo) * 0.1)
-            return WeightDataPoint(date: date, weight: weight)
-        }.reversed()
-
-        // Generate calorie data
-        calorieEntries = (0..<getDaysForRange()).map { daysAgo in
-            let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
-            let calories = Int.random(in: 1600...2400)
-            return CalorieDataPoint(date: date, calories: calories, goal: calorieGoal)
-        }.reversed()
-
-        // Sample achievements
-        recentAchievements = [
-            ProgressAchievement(
-                id: "1",
-                title: "7 Day Streak",
-                description: "Logged meals for 7 days in a row",
-                icon: "flame.fill",
-                color: .orange,
-                earnedDate: calendar.date(byAdding: .day, value: -1, to: today)!
-            ),
-            ProgressAchievement(
-                id: "2",
-                title: "First 5 lbs",
-                description: "Lost your first 5 pounds",
-                icon: "scalemass.fill",
-                color: FuelColors.primary,
-                earnedDate: calendar.date(byAdding: .day, value: -3, to: today)!
-            ),
-            ProgressAchievement(
-                id: "3",
-                title: "Protein Pro",
-                description: "Hit protein goal 5 days in a row",
-                icon: "bolt.fill",
-                color: FuelColors.protein,
-                earnedDate: calendar.date(byAdding: .day, value: -5, to: today)!
-            )
-        ]
+    private func loadUserGoals(from context: ModelContext) {
+        let descriptor = FetchDescriptor<User>()
+        if let user = try? context.fetch(descriptor).first {
+            calorieGoal = user.dailyCalorieTarget
+            proteinGoal = Double(user.dailyProteinTarget)
+            carbsGoal = Double(user.dailyCarbsTarget)
+            fatGoal = Double(user.dailyFatTarget)
+            goalWeight = user.targetWeightKg
+            startingWeight = user.currentWeightKg // Use current as starting if no history
+            currentWeight = user.currentWeightKg
+        }
     }
 
-    private func calculateAverages() {
-        guard !calorieEntries.isEmpty else { return }
+    // MARK: - Load Weight Data
 
-        averageCalories = calorieEntries.reduce(0) { $0 + $1.calories } / calorieEntries.count
+    private func loadWeightData(from context: ModelContext) {
+        let calendar = Calendar.current
+        let today = Date()
+        let startDate = calendar.date(byAdding: .day, value: -getDaysForRange(), to: today)!
 
-        // Sample macro averages
-        averageProtein = 120
-        averageCarbs = 180
-        averageFat = 55
+        var descriptor = FetchDescriptor<WeightEntry>(
+            predicate: #Predicate<WeightEntry> { $0.recordedAt >= startDate },
+            sortBy: [SortDescriptor(\WeightEntry.recordedAt, order: .forward)]
+        )
+
+        if let entries = try? context.fetch(descriptor) {
+            weightEntries = entries.map { entry in
+                WeightDataPoint(date: entry.recordedAt, weight: entry.weightKg)
+            }
+
+            // Set current weight from most recent entry
+            if let latest = entries.last {
+                currentWeight = latest.weightKg
+            }
+
+            // Set starting weight from first entry in range
+            if let first = entries.first, startingWeight == 0 {
+                startingWeight = first.weightKg
+            }
+        }
+    }
+
+    // MARK: - Load Calorie Data
+
+    private func loadCalorieData(from context: ModelContext) {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let daysCount = getDaysForRange()
+
+        var entries: [CalorieDataPoint] = []
+        var totalCalories = 0
+        var totalProtein: Double = 0
+        var totalCarbs: Double = 0
+        var totalFat: Double = 0
+        var daysWithData = 0
+
+        for dayOffset in 0..<daysCount {
+            let date = calendar.date(byAdding: .day, value: -dayOffset, to: today)!
+            let totals = MealService.shared.getDailyTotals(for: date, in: context)
+
+            entries.append(CalorieDataPoint(
+                date: date,
+                calories: totals.calories,
+                goal: calorieGoal
+            ))
+
+            if totals.calories > 0 {
+                totalCalories += totals.calories
+                totalProtein += totals.protein
+                totalCarbs += totals.carbs
+                totalFat += totals.fat
+                daysWithData += 1
+            }
+        }
+
+        calorieEntries = entries.reversed()
+
+        // Calculate averages (only from days with data)
+        if daysWithData > 0 {
+            averageCalories = totalCalories / daysWithData
+            averageProtein = totalProtein / Double(daysWithData)
+            averageCarbs = totalCarbs / Double(daysWithData)
+            averageFat = totalFat / Double(daysWithData)
+        } else {
+            averageCalories = 0
+            averageProtein = 0
+            averageCarbs = 0
+            averageFat = 0
+        }
+
+        totalDaysLogged = daysWithData
+    }
+
+    // MARK: - Calculate Streaks
+
+    private func calculateStreaks(from context: ModelContext) {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+
+        var streak = 0
+        var maxStreak = 0
+        var currentStreakCount = 0
+        var checkingCurrentStreak = true
+
+        // Check last 365 days for streaks
+        for dayOffset in 0..<365 {
+            let date = calendar.date(byAdding: .day, value: -dayOffset, to: today)!
+            let totals = MealService.shared.getDailyTotals(for: date, in: context)
+
+            if totals.calories > 0 {
+                streak += 1
+                if checkingCurrentStreak {
+                    currentStreakCount += 1
+                }
+                maxStreak = max(maxStreak, streak)
+            } else {
+                if checkingCurrentStreak && dayOffset > 0 {
+                    // Allow today to be empty (user might not have logged yet)
+                    checkingCurrentStreak = false
+                }
+                streak = 0
+            }
+        }
+
+        currentStreak = currentStreakCount
+        longestStreak = maxStreak
+    }
+
+    // MARK: - Load Achievements
+
+    private func loadAchievements(from context: ModelContext) {
+        var descriptor = FetchDescriptor<Achievement>(
+            predicate: #Predicate<Achievement> { $0.isUnlocked },
+            sortBy: [SortDescriptor(\Achievement.unlockedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = 3
+
+        if let achievements = try? context.fetch(descriptor) {
+            recentAchievements = achievements.map { achievement in
+                ProgressAchievement(
+                    id: achievement.id.uuidString,
+                    title: achievement.title,
+                    description: achievement.achievementDescription,
+                    icon: achievement.icon,
+                    color: tierColor(for: achievement.tier),
+                    earnedDate: achievement.unlockedAt ?? Date()
+                )
+            }
+        }
+    }
+
+    private func tierColor(for tier: AchievementTier) -> Color {
+        switch tier {
+        case .bronze: return FuelColors.bronze
+        case .silver: return FuelColors.silver
+        case .gold: return FuelColors.gold
+        case .platinum: return FuelColors.platinum
+        }
     }
 
     private func getDaysForRange() -> Int {
@@ -171,6 +305,16 @@ enum TimeRange: String, CaseIterable {
     case month = "Month"
     case threeMonths = "3 Months"
     case year = "Year"
+
+    /// Whether this time range requires premium access
+    var requiresPremium: Bool {
+        switch self {
+        case .week:
+            return false
+        case .month, .threeMonths, .year:
+            return true
+        }
+    }
 }
 
 // MARK: - Data Points

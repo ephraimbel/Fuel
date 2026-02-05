@@ -43,7 +43,14 @@ final class CameraViewModel: NSObject {
             isCameraAuthorized = true
         case .notDetermined:
             requestCameraPermission()
-        default:
+        case .denied:
+            isCameraAuthorized = false
+            error = .permissionDenied
+        case .restricted:
+            // Restricted by parental controls or device management
+            isCameraAuthorized = false
+            error = .permissionRestricted
+        @unknown default:
             isCameraAuthorized = false
         }
 
@@ -53,7 +60,9 @@ final class CameraViewModel: NSObject {
             isPhotoLibraryAuthorized = true
         case .notDetermined:
             requestPhotoLibraryPermission()
-        default:
+        case .denied, .restricted:
+            isPhotoLibraryAuthorized = false
+        @unknown default:
             isPhotoLibraryAuthorized = false
         }
     }
@@ -137,9 +146,10 @@ final class CameraViewModel: NSObject {
 
             if !self.session.isRunning {
                 self.session.startRunning()
+                let isRunning = self.session.isRunning
 
-                DispatchQueue.main.async {
-                    self.isSessionRunning = self.session.isRunning
+                DispatchQueue.main.async { [weak self] in
+                    self?.isSessionRunning = isRunning
                 }
             }
         }
@@ -152,8 +162,8 @@ final class CameraViewModel: NSObject {
             if self.session.isRunning {
                 self.session.stopRunning()
 
-                DispatchQueue.main.async {
-                    self.isSessionRunning = false
+                DispatchQueue.main.async { [weak self] in
+                    self?.isSessionRunning = false
                 }
             }
         }
@@ -193,13 +203,21 @@ final class CameraViewModel: NSObject {
     func savePhotoToLibrary() {
         guard let image = capturedImage else { return }
 
+        // Check permission before attempting save
+        guard isPhotoLibraryAuthorized else {
+            error = .photoLibraryPermissionDenied
+            FuelHaptics.shared.error()
+            return
+        }
+
         PHPhotoLibrary.shared().performChanges {
             PHAssetCreationRequest.creationRequestForAsset(from: image)
-        } completionHandler: { success, error in
+        } completionHandler: { [weak self] success, error in
             DispatchQueue.main.async {
                 if success {
                     FuelHaptics.shared.success()
                 } else {
+                    self?.error = .photoSaveFailed(error)
                     FuelHaptics.shared.error()
                 }
             }
@@ -251,6 +269,9 @@ enum CameraError: LocalizedError {
     case captureFailed(Error)
     case imageProcessingFailed
     case permissionDenied
+    case permissionRestricted
+    case photoLibraryPermissionDenied
+    case photoSaveFailed(Error?)
 
     var errorDescription: String? {
         switch self {
@@ -267,7 +288,13 @@ enum CameraError: LocalizedError {
         case .imageProcessingFailed:
             return "Failed to process captured image"
         case .permissionDenied:
-            return "Camera permission denied"
+            return "Camera permission denied. Please enable in Settings."
+        case .permissionRestricted:
+            return "Camera access is restricted by device policy"
+        case .photoLibraryPermissionDenied:
+            return "Photo library permission denied. Please enable in Settings."
+        case .photoSaveFailed(let error):
+            return "Failed to save photo: \(error?.localizedDescription ?? "Unknown error")"
         }
     }
 }

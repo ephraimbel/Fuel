@@ -5,10 +5,10 @@ import SwiftUI
 
 struct MealCard: View {
     let mealType: MealType
-    let items: [DashboardFoodItem]
+    let items: [FoodItem]
     let totalCalories: Int
     let onAddFood: () -> Void
-    let onDeleteItem: (DashboardFoodItem) -> Void
+    let onDeleteItem: (FoodItem) -> Void
 
     @State private var isExpanded = true
 
@@ -158,7 +158,7 @@ struct MealCard: View {
 // MARK: - Meal Item Row
 
 struct MealItemRow: View {
-    let item: DashboardFoodItem
+    let item: FoodItem
     let onDelete: () -> Void
 
     @State private var offset: CGFloat = 0
@@ -182,12 +182,12 @@ struct MealItemRow: View {
 
             // Main content
             HStack(spacing: FuelSpacing.md) {
-                // Food icon placeholder
+                // Food icon based on source
                 Circle()
                     .fill(FuelColors.surfaceSecondary)
                     .frame(width: 36, height: 36)
                     .overlay {
-                        Image(systemName: "leaf.fill")
+                        Image(systemName: item.source.icon)
                             .font(.system(size: 14))
                             .foregroundStyle(FuelColors.textTertiary)
                     }
@@ -199,7 +199,7 @@ struct MealItemRow: View {
                         .foregroundStyle(FuelColors.textPrimary)
                         .lineLimit(1)
 
-                    Text(item.servingSize)
+                    Text(item.fullDisplayServing)
                         .font(FuelTypography.caption)
                         .foregroundStyle(FuelColors.textTertiary)
                 }
@@ -264,19 +264,6 @@ struct MealItemRow: View {
 // MARK: - MealType Extensions
 
 extension MealType {
-    var icon: String {
-        switch self {
-        case .breakfast:
-            return "sunrise.fill"
-        case .lunch:
-            return "sun.max.fill"
-        case .dinner:
-            return "moon.stars.fill"
-        case .snack:
-            return "carrot.fill"
-        }
-    }
-
     var color: Color {
         switch self {
         case .breakfast:
@@ -289,19 +276,6 @@ extension MealType {
             return FuelColors.primary
         }
     }
-
-    var displayName: String {
-        switch self {
-        case .breakfast:
-            return "Breakfast"
-        case .lunch:
-            return "Lunch"
-        case .dinner:
-            return "Dinner"
-        case .snack:
-            return "Snacks"
-        }
-    }
 }
 
 // MARK: - Preview
@@ -310,27 +284,8 @@ extension MealType {
     VStack(spacing: FuelSpacing.md) {
         MealCard(
             mealType: .breakfast,
-            items: [
-                DashboardFoodItem(
-                    id: "1",
-                    name: "Greek Yogurt with Berries",
-                    calories: 180,
-                    protein: 15,
-                    carbs: 20,
-                    fat: 4,
-                    servingSize: "1 cup"
-                ),
-                DashboardFoodItem(
-                    id: "2",
-                    name: "Scrambled Eggs",
-                    calories: 220,
-                    protein: 14,
-                    carbs: 2,
-                    fat: 17,
-                    servingSize: "2 eggs"
-                )
-            ],
-            totalCalories: 400,
+            items: [],
+            totalCalories: 0,
             onAddFood: {},
             onDeleteItem: { _ in }
         )

@@ -77,8 +77,8 @@ struct CalculatingScreen: View {
     }
 
     private func startAnimation() {
-        // Animate progress and steps
-        let totalDuration = 2.0
+        // Animation timing matches calculatePlan() delay (0.8 seconds)
+        let totalDuration = 0.8
         let stepDuration = totalDuration / Double(steps.count)
 
         // Progress animation

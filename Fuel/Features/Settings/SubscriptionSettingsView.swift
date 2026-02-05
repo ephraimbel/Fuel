@@ -4,10 +4,24 @@ import SwiftUI
 /// Manage premium subscription
 
 struct SubscriptionSettingsView: View {
-    @State private var isPremium = false
-    @State private var subscriptionType: SubscriptionType = .monthly
+    @State private var subscriptionType: SubscriptionType = .yearly
     @State private var expirationDate: Date? = nil
     @State private var showingPlanOptions = false
+    @State private var isLoading = false
+    @State private var showError = false
+    @State private var errorMessage = ""
+
+    private var isPremium: Bool {
+        FeatureGateService.shared.isPremium
+    }
+
+    private var remainingScans: Int {
+        FeatureGateService.shared.remainingAIScans
+    }
+
+    private var isInTrial: Bool {
+        FeatureGateService.shared.isInTrial
+    }
 
     var body: some View {
         ScrollView {
@@ -43,36 +57,99 @@ struct SubscriptionSettingsView: View {
 
     private var currentStatusSection: some View {
         VStack(spacing: FuelSpacing.lg) {
-            // Crown icon
+            // Icon - Fuel+ branding for premium
             ZStack {
                 Circle()
-                    .fill(isPremium ? FuelColors.gold.opacity(0.2) : FuelColors.surfaceSecondary)
+                    .fill(isPremium ? FuelColors.primary.opacity(0.2) : FuelColors.surfaceSecondary)
                     .frame(width: 80, height: 80)
 
-                Image(systemName: "crown.fill")
+                Image(systemName: isPremium ? "flame.fill" : "flame")
                     .font(.system(size: 36))
-                    .foregroundStyle(isPremium ? FuelColors.gold : FuelColors.textTertiary)
+                    .foregroundStyle(isPremium ? FuelColors.primary : FuelColors.textTertiary)
             }
 
             // Status text
             VStack(spacing: FuelSpacing.xs) {
-                Text(isPremium ? "Premium Member" : "Free Plan")
-                    .font(FuelTypography.title2)
-                    .foregroundStyle(FuelColors.textPrimary)
+                if isPremium {
+                    // Fuel+ branding
+                    HStack(spacing: 0) {
+                        Text("Fuel")
+                            .font(FuelTypography.title2)
+                            .foregroundStyle(FuelColors.textPrimary)
 
-                if isPremium, let expiration = expirationDate {
-                    Text("Renews \(expiration.formatted(date: .abbreviated, time: .omitted))")
-                        .font(FuelTypography.subheadline)
-                        .foregroundStyle(FuelColors.textSecondary)
-                } else if !isPremium {
+                        Text("+")
+                            .font(FuelTypography.title2)
+                            .foregroundStyle(Color.red)
+
+                        Text(" Member")
+                            .font(FuelTypography.title2)
+                            .foregroundStyle(FuelColors.textPrimary)
+                    }
+
+                    if isInTrial {
+                        Text("\(FeatureGateService.shared.trialDaysRemaining) days left in trial")
+                            .font(FuelTypography.subheadline)
+                            .foregroundStyle(FuelColors.warning)
+                    } else if let expiration = expirationDate {
+                        Text("Renews \(expiration.formatted(date: .abbreviated, time: .omitted))")
+                            .font(FuelTypography.subheadline)
+                            .foregroundStyle(FuelColors.textSecondary)
+                    }
+                } else {
+                    Text("Free Plan")
+                        .font(FuelTypography.title2)
+                        .foregroundStyle(FuelColors.textPrimary)
+
                     Text("Upgrade for unlimited features")
                         .font(FuelTypography.subheadline)
                         .foregroundStyle(FuelColors.textSecondary)
                 }
             }
+
+            // Scan usage for free users
+            if !isPremium {
+                scanUsageIndicator
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, FuelSpacing.lg)
+    }
+
+    // MARK: - Scan Usage Indicator
+
+    private var scanUsageIndicator: some View {
+        VStack(spacing: FuelSpacing.sm) {
+            HStack {
+                Image(systemName: "camera.viewfinder")
+                    .foregroundStyle(FuelColors.primary)
+
+                Text("AI Scans This Week")
+                    .font(FuelTypography.subheadline)
+                    .foregroundStyle(FuelColors.textPrimary)
+
+                Spacer()
+
+                Text("\(remainingScans) of 3 remaining")
+                    .font(FuelTypography.subheadlineMedium)
+                    .foregroundStyle(remainingScans == 0 ? FuelColors.error : FuelColors.textSecondary)
+            }
+
+            // Progress bar
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(FuelColors.surfaceSecondary)
+
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(remainingScans == 0 ? FuelColors.error : FuelColors.primary)
+                        .frame(width: geometry.size.width * CGFloat(3 - remainingScans) / 3)
+                }
+            }
+            .frame(height: 8)
+        }
+        .padding(FuelSpacing.md)
+        .background(FuelColors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
     }
 
     // MARK: - Features Section
@@ -167,15 +244,15 @@ struct SubscriptionSettingsView: View {
             VStack(spacing: FuelSpacing.sm) {
                 planCard(
                     type: .yearly,
-                    price: "$49.99",
+                    price: "$59.99",
                     period: "per year",
-                    savings: "Save 58%",
+                    savings: "Save 62%",
                     isSelected: subscriptionType == .yearly
                 )
 
                 planCard(
                     type: .monthly,
-                    price: "$9.99",
+                    price: "$12.99",
                     period: "per month",
                     savings: nil,
                     isSelected: subscriptionType == .monthly
@@ -186,21 +263,35 @@ struct SubscriptionSettingsView: View {
             Button {
                 subscribe()
             } label: {
-                Text("Start Free Trial")
-                    .font(FuelTypography.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, FuelSpacing.md)
-                    .background(FuelColors.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
+                HStack(spacing: FuelSpacing.sm) {
+                    if isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(0.9)
+                    }
+
+                    Text(FeatureGateService.shared.hasUsedTrial ? "Subscribe Now" : "Start 3-Day Free Trial")
+                        .font(FuelTypography.headline)
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, FuelSpacing.md)
+                .background(FuelColors.primary)
+                .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
             }
+            .disabled(isLoading)
             .padding(.top, FuelSpacing.sm)
 
-            Text("7-day free trial, then \(subscriptionType == .yearly ? "$49.99/year" : "$9.99/month"). Cancel anytime.")
+            Text("3-day free trial, then \(subscriptionType == .yearly ? "$59.99/year" : "$12.99/month"). Cancel anytime.")
                 .font(FuelTypography.caption)
                 .foregroundStyle(FuelColors.textTertiary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
+        }
+        .alert("Error", isPresented: $showError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(errorMessage)
         }
     }
 
@@ -304,13 +395,68 @@ struct SubscriptionSettingsView: View {
     // MARK: - Actions
 
     private func subscribe() {
-        FuelHaptics.shared.tap()
-        // TODO: Implement subscription via StoreKit
+        FuelHaptics.shared.impact()
+        isLoading = true
+
+        Task {
+            do {
+                // Start trial if not used yet
+                if !FeatureGateService.shared.hasUsedTrial {
+                    FeatureGateService.shared.startTrial()
+                }
+
+                // Get the appropriate product
+                let productID: SubscriptionService.ProductID = subscriptionType == .yearly
+                    ? .yearlyPremium
+                    : .monthlyPremium
+
+                guard let product = SubscriptionService.shared.product(for: productID) else {
+                    throw SubscriptionError.productLoadFailed(NSError(domain: "", code: -1))
+                }
+
+                _ = try await SubscriptionService.shared.purchase(product)
+
+                await MainActor.run {
+                    isLoading = false
+                }
+            } catch SubscriptionError.userCancelled {
+                await MainActor.run {
+                    isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    isLoading = false
+                    errorMessage = error.localizedDescription
+                    showError = true
+                }
+            }
+        }
     }
 
     private func restorePurchases() {
         FuelHaptics.shared.tap()
-        // TODO: Implement restore via StoreKit
+        isLoading = true
+
+        Task {
+            do {
+                try await SubscriptionService.shared.restorePurchases()
+                await MainActor.run {
+                    isLoading = false
+                }
+            } catch SubscriptionError.noPurchasesToRestore {
+                await MainActor.run {
+                    isLoading = false
+                    errorMessage = "No previous purchases found."
+                    showError = true
+                }
+            } catch {
+                await MainActor.run {
+                    isLoading = false
+                    errorMessage = error.localizedDescription
+                    showError = true
+                }
+            }
+        }
     }
 
     private func openSubscriptionManagement() {
