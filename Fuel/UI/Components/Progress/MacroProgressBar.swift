@@ -18,11 +18,20 @@ public enum MacroType: String, CaseIterable {
         }
     }
 
+    var emoji: String {
+        switch self {
+        case .protein: return "🥩"
+        case .carbs: return "🌾"
+        case .fat: return "🥑"
+        }
+    }
+
+    /// SF Symbol name (kept for fallback contexts)
     var icon: String {
         switch self {
-        case .protein: return "bolt.fill"
+        case .protein: return "fish.fill"
         case .carbs: return "leaf.fill"
-        case .fat: return "drop.fill"
+        case .fat: return "drop.circle.fill"
         }
     }
 
@@ -32,6 +41,19 @@ public enum MacroType: String, CaseIterable {
 
     var unit: String {
         "g"
+    }
+}
+
+// MARK: - Macro Icon View
+
+/// Renders the appropriate emoji icon for each macro
+struct MacroIconView: View {
+    let type: MacroType
+    var size: CGFloat = 12
+
+    var body: some View {
+        Text(type.emoji)
+            .font(.system(size: size))
     }
 }
 
@@ -80,9 +102,7 @@ public struct MacroProgressBar: View {
                 HStack {
                     // Icon and name
                     HStack(spacing: FuelSpacing.xxs) {
-                        Image(systemName: type.icon)
-                            .font(.system(size: 12))
-                            .foregroundStyle(type.color)
+                        MacroIconView(type: type, size: 12)
 
                         Text(type.label)
                             .font(FuelTypography.subheadline)
@@ -278,9 +298,7 @@ public struct MacroCircle: View {
                     .rotationEffect(.degrees(-90))
 
                 // Icon
-                Image(systemName: type.icon)
-                    .font(.system(size: size * 0.3, weight: .medium))
-                    .foregroundStyle(type.color)
+                MacroIconView(type: type, size: size * 0.3)
             }
             .frame(width: size, height: size)
 

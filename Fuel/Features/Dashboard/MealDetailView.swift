@@ -438,6 +438,7 @@ struct MealDetailView: View {
     private func logMealAgain(to mealType: MealType) {
         MealService.shared.logMealAgain(meal, to: mealType, in: modelContext)
         FuelHaptics.shared.success()
+        ToastManager.shared.show("Added to \(mealType.displayName)", type: .success)
         dismiss()
     }
 

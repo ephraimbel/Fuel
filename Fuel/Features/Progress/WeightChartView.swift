@@ -7,6 +7,7 @@ import Charts
 struct WeightChartView: View {
     let entries: [WeightDataPoint]
     let goalWeight: Double
+    var timeRange: TimeRange = .week
 
     @State private var selectedEntry: WeightDataPoint?
     @State private var lastSelectedId: UUID?
@@ -25,6 +26,24 @@ struct WeightChartView: View {
         return max(maxEntry, goalWeight) + 5
     }
 
+    /// Minimum width so data points stay readable
+    private var chartWidth: CGFloat? {
+        let count = CGFloat(entries.count)
+        guard count > 10 else { return nil }
+        switch timeRange {
+        case .week:
+            return nil
+        case .month:
+            return max(count * 20, 500)
+        case .threeMonths:
+            return max(count * 14, 900)
+        case .year:
+            return max(count * 8, 2000)
+        }
+    }
+
+    private var needsScroll: Bool { chartWidth != nil }
+
     var body: some View {
         VStack(spacing: FuelSpacing.sm) {
             // Chart
@@ -33,7 +52,14 @@ struct WeightChartView: View {
                 .onAppear {
                     if !hasAppeared && !entries.isEmpty {
                         hasAppeared = true
-                        // Animate line drawing
+                        withAnimation(.easeOut(duration: 1.2)) {
+                            lineProgress = 1.0
+                        }
+                    }
+                }
+                .onChange(of: entries.count) { _, newCount in
+                    if newCount > 0 && !hasAppeared {
+                        hasAppeared = true
                         withAnimation(.easeOut(duration: 1.2)) {
                             lineProgress = 1.0
                         }
@@ -52,7 +78,14 @@ struct WeightChartView: View {
         if entries.isEmpty {
             emptyChartView
         } else if #available(iOS 16.0, *) {
-            swiftChartsView
+            if needsScroll {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    swiftChartsView
+                        .frame(width: chartWidth)
+                }
+            } else {
+                swiftChartsView
+            }
         } else {
             customChartView
         }

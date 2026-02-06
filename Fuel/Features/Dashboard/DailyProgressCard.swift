@@ -24,7 +24,6 @@ struct DailyProgressCard: View {
     @State private var animatedCarbs: Double = 0
     @State private var animatedFat: Double = 0
     @State private var showCalories = false
-    @State private var hasAppeared = false
 
     var body: some View {
         VStack(spacing: FuelSpacing.lg) {
@@ -37,13 +36,30 @@ struct DailyProgressCard: View {
             // Macro progress bars
             macroProgressSection
         }
-        .padding(FuelSpacing.lg)
-        .background(FuelColors.surface)
-        .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusLg))
-        .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
+        .padding(FuelSpacing.xl)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: FuelSpacing.radiusXl)
+                    .fill(FuelColors.heroCardGradient)
+
+                // Subtle accent glow in corner
+                Circle()
+                    .fill(FuelColors.primary.opacity(0.04))
+                    .frame(width: 200, height: 200)
+                    .blur(radius: 60)
+                    .offset(x: 80, y: -60)
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusXl))
+        .overlay(
+            RoundedRectangle(cornerRadius: FuelSpacing.radiusXl)
+                .stroke(FuelColors.border.opacity(0.5), lineWidth: 0.5)
+        )
+        .heroShadow()
         .onAppear {
-            guard !hasAppeared else { return }
-            hasAppeared = true
+            animateProgress()
+        }
+        .onChange(of: calorieProgress) { _, _ in
             animateProgress()
         }
     }
@@ -54,28 +70,28 @@ struct DailyProgressCard: View {
         ZStack {
             // Background ring (empty part)
             Circle()
-                .stroke(FuelColors.surfaceSecondary, lineWidth: 12)
-                .frame(width: 120, height: 120)
+                .stroke(FuelColors.surfaceSecondary.opacity(0.8), lineWidth: 14)
+                .frame(width: 140, height: 140)
 
-            // Subtle glow behind filled portion only
+            // Glow behind filled portion
             Circle()
                 .trim(from: 0, to: animatedProgress)
                 .stroke(
-                    ringColor.opacity(0.3),
-                    style: StrokeStyle(lineWidth: 16, lineCap: .round)
+                    ringColor.opacity(0.35),
+                    style: StrokeStyle(lineWidth: 22, lineCap: .round)
                 )
-                .frame(width: 120, height: 120)
+                .frame(width: 140, height: 140)
                 .rotationEffect(.degrees(-90))
-                .blur(radius: 6)
+                .blur(radius: 10)
 
-            // Progress ring with gradient (filled part only)
+            // Progress ring with gradient
             Circle()
                 .trim(from: 0, to: animatedProgress)
                 .stroke(
                     ringGradient,
-                    style: StrokeStyle(lineWidth: 12, lineCap: .round)
+                    style: StrokeStyle(lineWidth: 14, lineCap: .round)
                 )
-                .frame(width: 120, height: 120)
+                .frame(width: 140, height: 140)
                 .rotationEffect(.degrees(-90))
                 .animation(.spring(response: 0.8, dampingFraction: 0.7), value: animatedProgress)
 
@@ -83,7 +99,7 @@ struct DailyProgressCard: View {
             VStack(spacing: FuelSpacing.xxxs) {
                 if showCalories {
                     Text("\(totalCalories)")
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundStyle(isOverGoal ? FuelColors.error : FuelColors.textPrimary)
                         .contentTransition(.numericText())
 
@@ -173,7 +189,7 @@ struct DailyProgressCard: View {
     // MARK: - Premium Macro Progress Section
 
     private var macroProgressSection: some View {
-        HStack(spacing: FuelSpacing.md) {
+        HStack(spacing: FuelSpacing.sm) {
             PremiumMacroBar(
                 name: "Protein",
                 current: protein,
@@ -198,6 +214,9 @@ struct DailyProgressCard: View {
                 color: FuelColors.fat
             )
         }
+        .padding(FuelSpacing.md)
+        .background(FuelColors.surfaceSecondary.opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
     }
 
     // MARK: - Animation

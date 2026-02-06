@@ -37,6 +37,13 @@ final class DashboardViewModel {
     var totalCarbs: Double { dailyTotals.carbs }
     var totalFat: Double { dailyTotals.fat }
 
+    // Micronutrients
+    var totalFiber: Double { dailyTotals.fiber }
+    var totalSugar: Double { dailyTotals.sugar }
+    var totalSodium: Double { dailyTotals.sodium }
+    var totalSaturatedFat: Double { dailyTotals.saturatedFat }
+    var totalCholesterol: Double { dailyTotals.cholesterol }
+
     var remainingCalories: Int {
         max(0, calorieGoal - totalCalories)
     }
@@ -106,7 +113,9 @@ final class DashboardViewModel {
         meals = MealService.shared.getMealsGroupedByType(for: date, in: context)
 
         // Calculate totals
-        dailyTotals = MealService.shared.getDailyTotals(for: date, in: context)
+        let totals = MealService.shared.getDailyTotals(for: date, in: context)
+
+        dailyTotals = totals
 
         isLoading = false
     }

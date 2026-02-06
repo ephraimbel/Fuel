@@ -40,6 +40,7 @@ final class PreviousMealsViewModel {
         guard let meal = selectedMeal else { return }
         MealService.shared.logMealAgain(meal, to: mealType, in: context)
         FuelHaptics.shared.success()
+        ToastManager.shared.show("Added to \(mealType.displayName)", type: .success)
     }
 }
 

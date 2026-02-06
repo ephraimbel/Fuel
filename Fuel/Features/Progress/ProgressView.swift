@@ -8,6 +8,7 @@ struct ProgressScreen: View {
     @State private var viewModel = ProgressViewModel()
     @State private var showingAchievements = false
     @State private var showAnalyticsPaywall = false
+    @State private var showingLogWeight = false
 
     var body: some View {
         NavigationStack {
@@ -24,14 +25,14 @@ struct ProgressScreen: View {
                         )
                     }
 
-                    // Weight progress section
-                    weightProgressSection
-
-                    // Calorie trends section
+                    // Calorie trends section (moved up)
                     calorieTrendsSection
 
-                    // Macro averages section
+                    // Macro averages section (moved up)
                     macroAveragesSection
+
+                    // Weight progress section
+                    weightProgressSection
 
                     // Stats summary
                     statsSummarySection
@@ -45,7 +46,7 @@ struct ProgressScreen: View {
                 .padding(.bottom, FuelSpacing.screenBottom + 80) // Tab bar space
             }
             .scrollIndicators(.hidden)
-            .background(FuelColors.background)
+            .background(FuelColors.backgroundGradient)
             .navigationTitle("Progress")
             .navigationBarTitleDisplayMode(.inline)
             .refreshable {
@@ -59,6 +60,17 @@ struct ProgressScreen: View {
             }
             .fullScreenCover(isPresented: $showAnalyticsPaywall) {
                 PaywallView(context: .analyticsLimit)
+            }
+            .sheet(isPresented: $showingLogWeight) {
+                LogWeightSheet(
+                    currentWeight: viewModel.currentWeight,
+                    onSave: { weight in
+                        viewModel.logWeight(weight, in: modelContext)
+                        showingLogWeight = false
+                    }
+                )
+                .presentationDetents([.height(320)])
+                .presentationDragIndicator(.visible)
             }
         }
     }
@@ -137,7 +149,29 @@ struct ProgressScreen: View {
 
     private var weightProgressSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            sectionHeader(title: "Weight", icon: "scalemass.fill")
+            // Section header with Log Weight button
+            HStack {
+                sectionHeader(title: "Weight", icon: "scalemass.fill")
+
+                Spacer()
+
+                Button {
+                    FuelHaptics.shared.tap()
+                    showingLogWeight = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 10, weight: .semibold))
+                        Text("Log")
+                            .font(FuelTypography.captionMedium)
+                    }
+                    .foregroundStyle(FuelColors.primary)
+                    .padding(.horizontal, FuelSpacing.sm)
+                    .padding(.vertical, FuelSpacing.xs)
+                    .background(FuelColors.primary.opacity(0.1))
+                    .clipShape(Capsule())
+                }
+            }
 
             VStack(spacing: FuelSpacing.lg) {
                 // Weight summary stats
@@ -174,7 +208,8 @@ struct ProgressScreen: View {
                 // Weight chart
                 WeightChartView(
                     entries: viewModel.weightEntries,
-                    goalWeight: viewModel.goalWeight
+                    goalWeight: viewModel.goalWeight,
+                    timeRange: viewModel.selectedTimeRange
                 )
                 .frame(height: 200)
 
@@ -189,7 +224,11 @@ struct ProgressScreen: View {
             .padding(FuelSpacing.cardPadding)
             .background(FuelColors.surface)
             .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusLg))
-            .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
+            .overlay(
+                RoundedRectangle(cornerRadius: FuelSpacing.radiusLg)
+                    .stroke(FuelColors.border.opacity(0.3), lineWidth: 0.5)
+            )
+            .cardShadow()
         }
     }
 
@@ -309,14 +348,23 @@ struct ProgressScreen: View {
                 // Calorie chart
                 CalorieChartView(
                     entries: viewModel.calorieEntries,
-                    goal: viewModel.calorieGoal
+                    goal: viewModel.calorieGoal,
+                    timeRange: viewModel.selectedTimeRange
                 )
                 .frame(height: 160)
+
+                // Macro legend
+                MacroLegend()
+                    .padding(.top, FuelSpacing.xs)
             }
             .padding(FuelSpacing.cardPadding)
             .background(FuelColors.surface)
             .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusLg))
-            .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
+            .overlay(
+                RoundedRectangle(cornerRadius: FuelSpacing.radiusLg)
+                    .stroke(FuelColors.border.opacity(0.3), lineWidth: 0.5)
+            )
+            .cardShadow()
         }
     }
 
@@ -392,7 +440,7 @@ struct ProgressScreen: View {
         .padding(.horizontal, FuelSpacing.sm)
         .background(FuelColors.surface)
         .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
-        .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
+        .cardShadow()
     }
 
     // MARK: - Stats Summary Section
@@ -466,7 +514,7 @@ struct ProgressScreen: View {
         .padding(FuelSpacing.md)
         .background(FuelColors.surface)
         .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
-        .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
+        .cardShadow()
     }
 
     // MARK: - Achievements Section
@@ -529,7 +577,154 @@ struct ProgressScreen: View {
         .padding(FuelSpacing.md)
         .background(FuelColors.surface)
         .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
-        .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
+        .cardShadow()
+    }
+}
+
+// MARK: - Log Weight Sheet
+
+struct LogWeightSheet: View {
+    let currentWeight: Double
+    let onSave: (Double) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var weightText: String = ""
+    @FocusState private var isTextFieldFocused: Bool
+
+    init(currentWeight: Double, onSave: @escaping (Double) -> Void) {
+        self.currentWeight = currentWeight
+        self.onSave = onSave
+        self._weightText = State(initialValue: currentWeight > 0 ? String(format: "%.1f", currentWeight) : "")
+    }
+
+    private var enteredWeight: Double? {
+        Double(weightText)
+    }
+
+    private var isValidWeight: Bool {
+        if let weight = enteredWeight {
+            return weight > 50 && weight < 500
+        }
+        return false
+    }
+
+    private var weightDifference: Double? {
+        guard let entered = enteredWeight, currentWeight > 0 else { return nil }
+        return entered - currentWeight
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: FuelSpacing.lg) {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(FuelColors.primary.opacity(0.1))
+                        .frame(width: 72, height: 72)
+
+                    Image(systemName: "scalemass.fill")
+                        .font(.system(size: 32))
+                        .foregroundStyle(FuelColors.primary)
+                }
+                .padding(.top, FuelSpacing.lg)
+
+                // Weight input
+                HStack(spacing: FuelSpacing.md) {
+                    Button {
+                        adjustWeight(by: -0.1)
+                    } label: {
+                        Image(systemName: "minus")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundStyle(FuelColors.primary)
+                            .frame(width: 44, height: 44)
+                            .background(FuelColors.primary.opacity(0.1))
+                            .clipShape(Circle())
+                    }
+
+                    VStack(spacing: 4) {
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            TextField("0.0", text: $weightText)
+                                .font(.system(size: 44, weight: .bold, design: .rounded))
+                                .foregroundStyle(FuelColors.textPrimary)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.center)
+                                .focused($isTextFieldFocused)
+                                .frame(width: 120)
+
+                            Text("lbs")
+                                .font(FuelTypography.body)
+                                .foregroundStyle(FuelColors.textSecondary)
+                        }
+
+                        if let diff = weightDifference, abs(diff) > 0.05 {
+                            HStack(spacing: 4) {
+                                Image(systemName: diff > 0 ? "arrow.up.right" : "arrow.down.right")
+                                    .font(.system(size: 12, weight: .semibold))
+                                Text(String(format: "%+.1f lbs", diff))
+                                    .font(FuelTypography.captionMedium)
+                            }
+                            .foregroundStyle(diff < 0 ? FuelColors.success : FuelColors.textSecondary)
+                        }
+                    }
+
+                    Button {
+                        adjustWeight(by: 0.1)
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundStyle(FuelColors.primary)
+                            .frame(width: 44, height: 44)
+                            .background(FuelColors.primary.opacity(0.1))
+                            .clipShape(Circle())
+                    }
+                }
+
+                Spacer()
+
+                // Save button
+                Button {
+                    if let weight = enteredWeight {
+                        FuelHaptics.shared.success()
+                        onSave(weight)
+                    }
+                } label: {
+                    Text("Save Weight")
+                        .font(FuelTypography.bodyMedium)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(FuelColors.primary)
+                        .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
+                }
+                .disabled(!isValidWeight)
+                .opacity(isValidWeight ? 1 : 0.5)
+                .padding(.horizontal, FuelSpacing.screenHorizontal)
+                .padding(.bottom, FuelSpacing.md)
+            }
+            .background(FuelColors.background)
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Log Weight")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundStyle(FuelColors.textSecondary)
+                }
+            }
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    isTextFieldFocused = true
+                }
+            }
+        }
+    }
+
+    private func adjustWeight(by amount: Double) {
+        guard let current = enteredWeight else { return }
+        let newWeight = max(50, min(500, current + amount))
+        weightText = String(format: "%.1f", newWeight)
+        FuelHaptics.shared.tap()
     }
 }
 

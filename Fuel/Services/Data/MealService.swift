@@ -52,34 +52,10 @@ final class MealService {
 
     /// Get or create meal for a specific meal type and date
     func getOrCreateMeal(type: MealType, date: Date, in context: ModelContext) -> Meal {
-        let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: date)
-
-        guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
-            logger.error("Failed to calculate end of day, creating new meal")
-            let newMeal = Meal(mealType: type, loggedAt: date)
-            context.insert(newMeal)
-            return newMeal
-        }
-
-        let mealTypeRaw = type.rawValue
-
-        let predicate = #Predicate<Meal> { meal in
-            meal.loggedAt >= startOfDay &&
-            meal.loggedAt < endOfDay &&
-            meal.mealType.rawValue == mealTypeRaw &&
-            !meal.isDeleted
-        }
-
-        let descriptor = FetchDescriptor<Meal>(predicate: predicate)
-
-        do {
-            let existingMeals = try context.fetch(descriptor)
-            if let existingMeal = existingMeals.first {
-                return existingMeal
-            }
-        } catch {
-            logger.error("Failed to fetch existing meal: \(error.localizedDescription)")
+        // Use the day-level fetch and filter by type in memory to avoid SwiftData predicate issues with enums
+        let meals = getMeals(for: date, in: context)
+        if let existingMeal = meals.first(where: { $0.mealType == type }) {
+            return existingMeal
         }
 
         // Create new meal
@@ -298,6 +274,15 @@ final class MealService {
             addFoodItem(newItem, to: mealType, date: date, in: context)
         }
 
+        // Copy photo to the target meal so it shows in the dashboard
+        let targetMeal = getOrCreateMeal(type: mealType, date: date, in: context)
+        if targetMeal.photoURL == nil {
+            targetMeal.photoURL = sourceMeal.photoURL
+            targetMeal.photoLocalPath = sourceMeal.photoLocalPath
+            targetMeal.photoThumbnailData = sourceMeal.photoThumbnailData
+        }
+
+        save(context)
         logger.info("Logged meal again: \(foodItems.count) items to \(mealType.rawValue)")
     }
 

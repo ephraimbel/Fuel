@@ -63,6 +63,16 @@ struct FuelApp: App {
                     .environment(appState)
                     .withToasts()
                     .modelContainer(container)
+                    .onAppear {
+                        #if DEBUG
+                        if CommandLine.arguments.contains("--load-demo-data") {
+                            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+                            appState.showOnboarding = false
+                            MockDataService.shared.generateMockData(in: container.mainContext)
+                            logger.info("Demo data loaded via launch argument")
+                        }
+                        #endif
+                    }
             } else {
                 DatabaseErrorView {
                     // Attempt recovery by resetting the app

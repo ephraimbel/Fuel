@@ -1,67 +1,91 @@
 import SwiftUI
 
-/// Today Meal Card
-/// Visual meal card with photo, calories, and macros for the Today's Meals section
+/// Today Meal Card - Premium Design
+/// Horizontal card with photo on left, meal info on right
+/// Matches Cal AI's "Recently logged" design
 
 struct TodayMealCard: View {
     let meal: Meal
     let onTap: () -> Void
 
-    @State private var isPressed = false
-
     var body: some View {
         Button {
-            FuelHaptics.shared.tap()
             onTap()
         } label: {
-            ZStack(alignment: .bottomLeading) {
-                // Photo background
+            HStack(spacing: FuelSpacing.md) {
+                // Meal photo (left side)
                 mealPhotoView
-                    .frame(height: 160)
-                    .frame(maxWidth: .infinity)
+                    .frame(width: 100, height: 100)
+                    .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
 
-                // Gradient overlay
-                LinearGradient(
-                    colors: [.clear, .black.opacity(0.7)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
+                // Meal info (right side)
+                VStack(alignment: .leading, spacing: FuelSpacing.xs) {
+                    // Top row: Meal name + time badge
+                    HStack(alignment: .top) {
+                        Text(mealName)
+                            .font(FuelTypography.subheadlineMedium)
+                            .foregroundStyle(FuelColors.textPrimary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
 
-                // Content overlay
-                VStack(alignment: .leading, spacing: FuelSpacing.xxs) {
-                    Spacer()
+                        Spacer(minLength: 8)
 
-                    // Meal type and time
-                    HStack(spacing: FuelSpacing.xxs) {
-                        Image(systemName: meal.mealType.icon)
-                            .font(.system(size: 10, weight: .semibold))
-
+                        // Time badge
                         Text(meal.displayTime)
-                            .font(FuelTypography.caption)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(FuelColors.textTertiary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(FuelColors.surfaceSecondary)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
-                    .foregroundStyle(.white.opacity(0.8))
 
-                    // Calories
-                    Text("\(meal.totalCalories)")
-                        .font(FuelTypography.title2)
-                        .foregroundStyle(.white)
-                    + Text(" cal")
-                        .font(FuelTypography.subheadline)
-                        .foregroundStyle(.white.opacity(0.8))
+                    Spacer(minLength: 4)
 
-                    // Macros
-                    HStack(spacing: FuelSpacing.sm) {
-                        macroLabel(value: meal.totalProtein, letter: "P", color: FuelColors.protein)
-                        macroLabel(value: meal.totalCarbs, letter: "C", color: FuelColors.carbs)
-                        macroLabel(value: meal.totalFat, letter: "F", color: FuelColors.fat)
+                    // Calories with fire icon
+                    HStack(spacing: 4) {
+                        Image(systemName: "flame.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(FuelColors.primary)
+
+                        Text("\(meal.totalCalories) calories")
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundStyle(FuelColors.textPrimary)
+                    }
+
+                    // Macro row
+                    HStack(spacing: FuelSpacing.md) {
+                        macroItem(macro: .protein, value: Int(meal.totalProtein))
+                        macroItem(macro: .carbs, value: Int(meal.totalCarbs))
+                        macroItem(macro: .fat, value: Int(meal.totalFat))
                     }
                 }
-                .padding(FuelSpacing.sm)
+                .padding(.vertical, FuelSpacing.xs)
             }
+            .padding(FuelSpacing.sm)
+            .background(FuelColors.surface)
             .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusLg))
-            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+            .overlay(
+                RoundedRectangle(cornerRadius: FuelSpacing.radiusLg)
+                    .stroke(FuelColors.border.opacity(0.3), lineWidth: 0.5)
+            )
+            .cardShadow()
         }
         .buttonStyle(MealCardButtonStyle())
+    }
+
+    // MARK: - Meal Name
+
+    private var mealName: String {
+        if let items = meal.foodItems, !items.isEmpty {
+            let names = items.prefix(3).map { $0.name }
+            let joined = names.joined(separator: ", ")
+            if items.count > 3 {
+                return "\(joined)..."
+            }
+            return joined
+        }
+        return meal.mealType.displayName
     }
 
     // MARK: - Photo View
@@ -77,9 +101,7 @@ struct TodayMealCard: View {
             AsyncImage(url: URL(fileURLWithPath: localPath)) { phase in
                 switch phase {
                 case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
+                    image.resizable().aspectRatio(contentMode: .fill)
                 case .failure, .empty:
                     placeholderView
                 @unknown default:
@@ -91,9 +113,7 @@ struct TodayMealCard: View {
             AsyncImage(url: url) { phase in
                 switch phase {
                 case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
+                    image.resizable().aspectRatio(contentMode: .fill)
                 case .failure, .empty:
                     placeholderView
                 @unknown default:
@@ -107,29 +127,17 @@ struct TodayMealCard: View {
 
     private var placeholderView: some View {
         ZStack {
-            mealTypeGradient
+            // Subtle gradient background based on meal type
+            LinearGradient(
+                colors: mealGradientColors,
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
 
-            VStack(spacing: FuelSpacing.xs) {
-                Image(systemName: meal.mealType.icon)
-                    .font(.system(size: 32, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.5))
-
-                if let items = meal.foodItems, !items.isEmpty {
-                    Text(items.first?.name ?? "")
-                        .font(FuelTypography.caption)
-                        .foregroundStyle(.white.opacity(0.6))
-                        .lineLimit(1)
-                }
-            }
+            Image(systemName: meal.mealType.icon)
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.6))
         }
-    }
-
-    private var mealTypeGradient: some View {
-        LinearGradient(
-            colors: mealGradientColors,
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
     }
 
     private var mealGradientColors: [Color] {
@@ -141,20 +149,19 @@ struct TodayMealCard: View {
         case .dinner:
             return [Color.purple.opacity(0.7), Color.indigo.opacity(0.5)]
         case .snack:
-            return [FuelColors.primary.opacity(0.8), FuelColors.primaryDark.opacity(0.6)]
+            return [FuelColors.primary.opacity(0.8), FuelColors.primary.opacity(0.5)]
         }
     }
 
-    // MARK: - Macro Label
+    // MARK: - Macro Item
 
-    private func macroLabel(value: Double, letter: String, color: Color) -> some View {
-        HStack(spacing: 2) {
-            Text("\(Int(value))")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white)
-            Text(letter)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(color)
+    private func macroItem(macro: MacroType, value: Int) -> some View {
+        HStack(spacing: 4) {
+            MacroIconView(type: macro, size: 11)
+
+            Text("\(value)g")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(FuelColors.textSecondary)
         }
     }
 }
@@ -164,64 +171,35 @@ struct TodayMealCard: View {
 struct MealCardButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
-            .opacity(configuration.isPressed ? 0.9 : 1.0)
-            .animation(FuelAnimations.springQuick, value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .opacity(configuration.isPressed ? 0.95 : 1.0)
+            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 
-// MARK: - Empty State Card
+// MARK: - Empty Meals Card
 
 struct EmptyMealsCard: View {
     let onAddMeal: () -> Void
 
     var body: some View {
-        VStack(spacing: FuelSpacing.md) {
-            // Icon
-            Circle()
-                .fill(FuelColors.primary.opacity(0.1))
-                .frame(width: 64, height: 64)
-                .overlay {
-                    Image(systemName: "camera.fill")
-                        .font(.system(size: 24))
-                        .foregroundStyle(FuelColors.primary)
-                }
+        VStack(spacing: 12) {
+            Image(systemName: "fork.knife")
+                .font(.system(size: 32, weight: .thin))
+                .foregroundStyle(FuelColors.textTertiary.opacity(0.4))
 
-            // Text
-            VStack(spacing: FuelSpacing.xs) {
-                Text("No meals logged yet")
-                    .font(FuelTypography.headline)
-                    .foregroundStyle(FuelColors.textPrimary)
-
-                Text("Take a photo of your food to get started")
-                    .font(FuelTypography.subheadline)
+            VStack(spacing: 4) {
+                Text("No meals logged")
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(FuelColors.textSecondary)
-                    .multilineTextAlignment(.center)
-            }
 
-            // Add button
-            Button {
-                FuelHaptics.shared.tap()
-                onAddMeal()
-            } label: {
-                HStack(spacing: FuelSpacing.xs) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 14, weight: .semibold))
-                    Text("Add First Meal")
-                        .font(FuelTypography.headline)
-                }
-                .foregroundStyle(.white)
-                .padding(.horizontal, FuelSpacing.lg)
-                .padding(.vertical, FuelSpacing.sm)
-                .background(FuelColors.primary)
-                .clipShape(Capsule())
+                Text("Tap \(Image(systemName: "plus")) to get started")
+                    .font(.system(size: 14))
+                    .foregroundStyle(FuelColors.textTertiary)
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, FuelSpacing.xxl)
-        .padding(.horizontal, FuelSpacing.lg)
-        .background(FuelColors.surface)
-        .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusLg))
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.vertical, 48)
     }
 }
 
@@ -231,6 +209,11 @@ struct EmptyMealsCard: View {
     VStack(spacing: FuelSpacing.md) {
         TodayMealCard(
             meal: Meal(mealType: .breakfast, loggedAt: Date()),
+            onTap: {}
+        )
+
+        TodayMealCard(
+            meal: Meal(mealType: .lunch, loggedAt: Date()),
             onTap: {}
         )
 

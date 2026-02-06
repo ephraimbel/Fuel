@@ -42,18 +42,18 @@ struct PhotoReviewView: View {
 
             // Results overlay
             if let result = analysisResult {
-                AnalysisResultsView(
+                MealResultsView(
+                    image: image,
                     result: result,
                     mealType: selectedMealType,
                     onMealTypeChange: { selectedMealType = $0 },
                     onConfirm: {
-                        // Save meal and dismiss
                         FuelHaptics.shared.success()
                         onConfirm()
                     },
-                    onRetake: {
+                    onFixResults: {
+                        // Allow user to retake or edit
                         analysisResult = nil
-                        onRetake()
                     }
                 )
             }
@@ -98,7 +98,7 @@ struct PhotoReviewView: View {
             .background(.ultraThinMaterial)
             .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
             .padding(.horizontal, FuelSpacing.screenHorizontal)
-            .padding(.bottom, 100) // Above bottom panel
+            .padding(.bottom, 100)
         }
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
@@ -217,7 +217,6 @@ struct PhotoReviewView: View {
     // MARK: - Analysis
 
     private func analyzePhoto() {
-        // Check scan limit BEFORE analyzing
         guard FeatureGateService.shared.canUseAIScan() else {
             FuelHaptics.shared.error()
             showPaywall = true
@@ -236,19 +235,16 @@ struct PhotoReviewView: View {
                 await MainActor.run {
                     isAnalyzing = false
 
-                    // Check if any food was detected
                     if result.items.isEmpty {
                         FuelHaptics.shared.error()
                         onNotFood?()
                     } else {
-                        // Use a scan on success
                         FeatureGateService.shared.useAIScan()
 
                         analysisResult = result
                         selectedMealType = result.suggestedMealType
                         FuelHaptics.shared.success()
 
-                        // Show low scans warning if applicable
                         let remaining = FeatureGateService.shared.remainingAIScans
                         if remaining > 0 && remaining <= 2 && !FeatureGateService.shared.isPremium {
                             withAnimation(FuelAnimations.spring) {
@@ -274,354 +270,343 @@ struct PhotoReviewView: View {
     }
 }
 
-// MARK: - Analysis Results View
+// MARK: - Meal Results View (Cal AI Style)
 
-struct AnalysisResultsView: View {
+struct MealResultsView: View {
+    let image: UIImage
     let result: MealAnalysisResult
     let mealType: MealType
     let onMealTypeChange: (MealType) -> Void
     let onConfirm: () -> Void
-    let onRetake: () -> Void
+    let onFixResults: () -> Void
 
-    @State private var editingItems: [AnalyzedFoodItem]
-
-    init(
-        result: MealAnalysisResult,
-        mealType: MealType,
-        onMealTypeChange: @escaping (MealType) -> Void,
-        onConfirm: @escaping () -> Void,
-        onRetake: @escaping () -> Void
-    ) {
-        self.result = result
-        self.mealType = mealType
-        self.onMealTypeChange = onMealTypeChange
-        self.onConfirm = onConfirm
-        self.onRetake = onRetake
-        self._editingItems = State(initialValue: result.items)
-    }
+    @State private var servings: Int = 1
+    @State private var cardOffset: CGFloat = 0
 
     private var totalCalories: Int {
-        editingItems.reduce(0) { $0 + $1.calories }
+        result.items.reduce(0) { $0 + $1.calories } * servings
+    }
+
+    private var totalProtein: Int {
+        Int(result.items.reduce(0) { $0 + $1.protein }) * servings
+    }
+
+    private var totalCarbs: Int {
+        Int(result.items.reduce(0) { $0 + $1.carbs }) * servings
+    }
+
+    private var totalFat: Int {
+        Int(result.items.reduce(0) { $0 + $1.fat }) * servings
+    }
+
+    private var healthScore: Int {
+        // Calculate health score based on macro balance
+        let proteinRatio = Double(totalProtein) * 4 / max(Double(totalCalories), 1)
+        let fatRatio = Double(totalFat) * 9 / max(Double(totalCalories), 1)
+
+        var score = 5 // Base score
+
+        // Good protein ratio (20-35%)
+        if proteinRatio >= 0.20 && proteinRatio <= 0.35 {
+            score += 2
+        } else if proteinRatio >= 0.15 {
+            score += 1
+        }
+
+        // Moderate fat (20-35%)
+        if fatRatio >= 0.20 && fatRatio <= 0.35 {
+            score += 2
+        } else if fatRatio <= 0.40 {
+            score += 1
+        }
+
+        // Calorie penalty for very high calorie meals
+        if totalCalories > 800 {
+            score -= 1
+        }
+
+        return min(max(score, 1), 10)
+    }
+
+    private var foodName: String {
+        if result.items.count == 1 {
+            return result.items[0].name
+        } else if result.items.count > 1 {
+            return "\(result.items[0].name) & more"
+        }
+        return "Analyzed Meal"
     }
 
     var body: some View {
-        ZStack {
-            Color.black.opacity(0.9)
-                .ignoresSafeArea()
+        ZStack(alignment: .bottom) {
+            // Background
+            Color.black.ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                // Header
-                header
-                    .padding(.top, FuelSpacing.xl)
+            // Food image at top
+            VStack {
+                GeometryReader { geometry in
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: geometry.size.width, height: geometry.size.height * 0.55)
+                        .clipped()
+                        .overlay(alignment: .top) {
+                            // Top bar with Nutrition label
+                            HStack {
+                                Spacer()
 
-                // Scrollable content
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: FuelSpacing.lg) {
-                        // Confidence indicator
-                        confidenceIndicator
+                                Text("Nutrition")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(.ultraThinMaterial)
+                                    .clipShape(Capsule())
 
-                        // Meal type selector
-                        mealTypeSelector
-
-                        // Food items
-                        foodItemsList
-
-                        // Summary
-                        nutritionSummary
-                    }
-                    .padding(.horizontal, FuelSpacing.screenHorizontal)
-                    .padding(.bottom, FuelSpacing.xxl)
+                                Spacer()
+                            }
+                            .padding(.top, 60)
+                        }
+                        .overlay(alignment: .topTrailing) {
+                            // Menu button
+                            Button {
+                                FuelHaptics.shared.tap()
+                            } label: {
+                                Image(systemName: "ellipsis")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundStyle(.white)
+                                    .frame(width: 36, height: 36)
+                                    .background(.ultraThinMaterial)
+                                    .clipShape(Circle())
+                            }
+                            .padding(.top, 56)
+                            .padding(.trailing, 16)
+                        }
                 }
-
-                // Bottom actions
-                bottomActions
-            }
-        }
-    }
-
-    // MARK: - Header
-
-    private var header: some View {
-        VStack(spacing: FuelSpacing.sm) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 44))
-                .foregroundStyle(FuelColors.success)
-
-            Text("Meal Analyzed!")
-                .font(FuelTypography.title2)
-                .foregroundStyle(.white)
-
-            Text("Review and adjust if needed")
-                .font(FuelTypography.subheadline)
-                .foregroundStyle(.white.opacity(0.7))
-        }
-        .padding(.bottom, FuelSpacing.lg)
-    }
-
-    // MARK: - Confidence Indicator
-
-    private var confidenceIndicator: some View {
-        HStack(spacing: FuelSpacing.sm) {
-            Image(systemName: "sparkles")
-                .foregroundStyle(FuelColors.primary)
-
-            Text("AI Confidence: \(Int(result.confidence * 100))%")
-                .font(FuelTypography.subheadline)
-                .foregroundStyle(.white.opacity(0.7))
-
-            Spacer()
-        }
-        .padding(FuelSpacing.md)
-        .background(.white.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
-    }
-
-    // MARK: - Meal Type Selector
-
-    private var mealTypeSelector: some View {
-        VStack(alignment: .leading, spacing: FuelSpacing.sm) {
-            Text("Meal Type")
-                .font(FuelTypography.caption)
-                .foregroundStyle(.white.opacity(0.6))
-                .textCase(.uppercase)
-
-            HStack(spacing: FuelSpacing.sm) {
-                ForEach(MealType.allCases, id: \.self) { type in
-                    mealTypeButton(type)
-                }
-            }
-        }
-    }
-
-    private func mealTypeButton(_ type: MealType) -> some View {
-        Button {
-            FuelHaptics.shared.select()
-            onMealTypeChange(type)
-        } label: {
-            VStack(spacing: FuelSpacing.xs) {
-                Image(systemName: type.icon)
-                    .font(.system(size: 20))
-
-                Text(type.displayName)
-                    .font(FuelTypography.caption)
-            }
-            .foregroundStyle(mealType == type ? .black : .white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, FuelSpacing.sm)
-            .background(mealType == type ? FuelColors.primary : .white.opacity(0.1))
-            .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
-        }
-    }
-
-    // MARK: - Food Items List
-
-    private var foodItemsList: some View {
-        VStack(alignment: .leading, spacing: FuelSpacing.sm) {
-            Text("Detected Foods")
-                .font(FuelTypography.caption)
-                .foregroundStyle(.white.opacity(0.6))
-                .textCase(.uppercase)
-
-            ForEach(editingItems) { item in
-                FoodItemRow(item: item)
-            }
-        }
-    }
-
-    // MARK: - Nutrition Summary
-
-    private var nutritionSummary: some View {
-        VStack(spacing: FuelSpacing.md) {
-            HStack {
-                Text("Total")
-                    .font(FuelTypography.headline)
-                    .foregroundStyle(.white)
 
                 Spacer()
-
-                Text("\(totalCalories) cal")
-                    .font(FuelTypography.title2)
-                    .foregroundStyle(FuelColors.primary)
             }
 
-            HStack(spacing: FuelSpacing.lg) {
-                macroSummaryItem(
-                    label: "Protein",
-                    value: editingItems.reduce(0) { $0 + $1.protein },
-                    color: FuelColors.protein
-                )
-                macroSummaryItem(
-                    label: "Carbs",
-                    value: editingItems.reduce(0) { $0 + $1.carbs },
-                    color: FuelColors.carbs
-                )
-                macroSummaryItem(
-                    label: "Fat",
-                    value: editingItems.reduce(0) { $0 + $1.fat },
-                    color: FuelColors.fat
-                )
-            }
-        }
-        .padding(FuelSpacing.md)
-        .background(.white.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
-    }
+            // White card from bottom
+            VStack(spacing: 0) {
+                // Drag indicator
+                RoundedRectangle(cornerRadius: 2.5)
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 36, height: 5)
+                    .padding(.top, 12)
+                    .padding(.bottom, 16)
 
-    private func macroSummaryItem(label: String, value: Double, color: Color) -> some View {
-        VStack(spacing: FuelSpacing.xxs) {
-            Circle()
-                .fill(color)
-                .frame(width: 8, height: 8)
+                VStack(spacing: 20) {
+                    // Meal type and name
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(mealType.displayName)
+                            .font(.system(size: 13))
+                            .foregroundStyle(.gray)
 
-            Text("\(Int(value))g")
-                .font(FuelTypography.headline)
-                .foregroundStyle(.white)
+                        HStack {
+                            Text(foodName)
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundStyle(.black)
 
-            Text(label)
-                .font(FuelTypography.caption)
-                .foregroundStyle(.white.opacity(0.6))
-        }
-        .frame(maxWidth: .infinity)
-    }
+                            Spacer()
 
-    // MARK: - Bottom Actions
+                            // Quantity selector
+                            HStack(spacing: 0) {
+                                Button {
+                                    if servings > 1 {
+                                        servings -= 1
+                                        FuelHaptics.shared.tap()
+                                    }
+                                } label: {
+                                    Image(systemName: "minus")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundStyle(servings > 1 ? .black : .gray)
+                                        .frame(width: 32, height: 32)
+                                }
 
-    private var bottomActions: some View {
-        HStack(spacing: FuelSpacing.md) {
-            Button {
-                onRetake()
-            } label: {
-                Text("Retake")
-                    .font(FuelTypography.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, FuelSpacing.md)
-                    .background(.white.opacity(0.2))
-                    .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
-            }
+                                Text("\(servings)")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(.black)
+                                    .frame(width: 32)
 
-            Button {
-                onConfirm()
-            } label: {
-                HStack(spacing: FuelSpacing.xs) {
-                    Image(systemName: "checkmark")
-                    Text("Log Meal")
+                                Button {
+                                    servings += 1
+                                    FuelHaptics.shared.tap()
+                                } label: {
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundStyle(.black)
+                                        .frame(width: 32, height: 32)
+                                }
+                            }
+                            .background(Color.gray.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                    }
+
+                    // Nutrition grid 2x2
+                    LazyVGrid(columns: [
+                        GridItem(.flexible(), spacing: 12),
+                        GridItem(.flexible(), spacing: 12)
+                    ], spacing: 12) {
+                        NutritionGridItem(
+                            icon: "flame.fill",
+                            iconColor: .orange,
+                            label: "Calories",
+                            value: "\(totalCalories)"
+                        )
+
+                        NutritionGridItem(
+                            icon: "leaf.fill",
+                            iconColor: .green,
+                            label: "Carbs",
+                            value: "\(totalCarbs)g"
+                        )
+
+                        NutritionGridItem(
+                            icon: "fish.fill",
+                            iconColor: FuelColors.protein,
+                            label: "Protein",
+                            value: "\(totalProtein)g",
+                            emoji: "🥩"
+                        )
+
+                        NutritionGridItem(
+                            icon: "drop.circle.fill",
+                            iconColor: FuelColors.fat,
+                            label: "Fats",
+                            value: "\(totalFat)g",
+                            emoji: "🥑"
+                        )
+                    }
+
+                    // Health score
+                    VStack(spacing: 8) {
+                        HStack {
+                            Image(systemName: "heart.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(.pink)
+
+                            Text("Health score")
+                                .font(.system(size: 14))
+                                .foregroundStyle(.gray)
+
+                            Spacer()
+
+                            Text("\(healthScore)/10")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.black)
+                        }
+
+                        // Progress bar
+                        GeometryReader { geometry in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(Color.gray.opacity(0.15))
+
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [.green, .yellow, .orange],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .frame(width: geometry.size.width * CGFloat(healthScore) / 10.0)
+                            }
+                        }
+                        .frame(height: 6)
+                    }
+                    .padding(16)
+                    .background(Color.gray.opacity(0.05))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                    // Bottom buttons
+                    HStack(spacing: 12) {
+                        Button {
+                            FuelHaptics.shared.tap()
+                            onFixResults()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "pencil")
+                                    .font(.system(size: 14))
+                                Text("Fix Results")
+                                    .font(.system(size: 15, weight: .medium))
+                            }
+                            .foregroundStyle(.black)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(Color.gray.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: 25))
+                        }
+
+                        Button {
+                            FuelHaptics.shared.success()
+                            onConfirm()
+                        } label: {
+                            Text("Done")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 50)
+                                .background(Color.black)
+                                .clipShape(RoundedRectangle(cornerRadius: 25))
+                        }
+                    }
                 }
-                .font(FuelTypography.headline)
-                .foregroundStyle(.black)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, FuelSpacing.md)
-                .background(FuelColors.primary)
-                .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
+                .padding(.horizontal, 20)
+                .padding(.bottom, 34)
             }
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(.white)
+                    .ignoresSafeArea(edges: .bottom)
+            )
+            .frame(height: UIScreen.main.bounds.height * 0.55)
         }
-        .padding(.horizontal, FuelSpacing.screenHorizontal)
-        .padding(.vertical, FuelSpacing.lg)
-        .background(.black)
     }
 }
 
-// MARK: - Food Item Row
+// MARK: - Nutrition Grid Item
 
-struct FoodItemRow: View {
-    let item: AnalyzedFoodItem
-    @State private var isExpanded = false
+struct NutritionGridItem: View {
+    let icon: String
+    let iconColor: Color
+    let label: String
+    let value: String
+    var emoji: String? = nil
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Main row
-            HStack(spacing: FuelSpacing.md) {
-                VStack(alignment: .leading, spacing: FuelSpacing.xxxs) {
-                    Text(item.name)
-                        .font(FuelTypography.headline)
-                        .foregroundStyle(.white)
-
-                    Text(item.servingSize)
-                        .font(FuelTypography.caption)
-                        .foregroundStyle(.white.opacity(0.6))
-                }
-
-                Spacer()
-
-                HStack(spacing: FuelSpacing.sm) {
-                    Text("\(item.calories) cal")
-                        .font(FuelTypography.subheadlineMedium)
-                        .foregroundStyle(FuelColors.primary)
-
-                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.5))
+        HStack(spacing: 12) {
+            Group {
+                if let emoji {
+                    Text(emoji)
+                        .font(.system(size: 18))
+                } else {
+                    Image(systemName: icon)
+                        .font(.system(size: 18))
+                        .foregroundStyle(iconColor)
                 }
             }
-            .padding(FuelSpacing.md)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    isExpanded.toggle()
-                }
+            .frame(width: 36, height: 36)
+            .background(iconColor.opacity(0.12))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.gray)
+
+                Text(value)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.black)
             }
 
-            // Expanded nutrition details
-            if isExpanded {
-                VStack(spacing: FuelSpacing.sm) {
-                    Divider()
-                        .background(.white.opacity(0.2))
-
-                    // Macros
-                    HStack(spacing: FuelSpacing.md) {
-                        microNutrientLabel("Protein", "\(Int(item.protein))g", FuelColors.protein)
-                        microNutrientLabel("Carbs", "\(Int(item.carbs))g", FuelColors.carbs)
-                        microNutrientLabel("Fat", "\(Int(item.fat))g", FuelColors.fat)
-                    }
-
-                    // Micros (if available)
-                    if item.fiber != nil || item.sugar != nil || item.sodium != nil {
-                        Divider()
-                            .background(.white.opacity(0.2))
-
-                        HStack(spacing: FuelSpacing.md) {
-                            if let fiber = item.fiber {
-                                microNutrientLabel("Fiber", "\(Int(fiber))g", .white.opacity(0.7))
-                            }
-                            if let sugar = item.sugar {
-                                microNutrientLabel("Sugar", "\(Int(sugar))g", .white.opacity(0.7))
-                            }
-                            if let sodium = item.sodium {
-                                microNutrientLabel("Sodium", "\(Int(sodium))mg", .white.opacity(0.7))
-                            }
-                        }
-                    }
-
-                    if item.saturatedFat != nil || item.cholesterol != nil {
-                        HStack(spacing: FuelSpacing.md) {
-                            if let satFat = item.saturatedFat {
-                                microNutrientLabel("Sat Fat", "\(Int(satFat))g", .white.opacity(0.7))
-                            }
-                            if let cholesterol = item.cholesterol {
-                                microNutrientLabel("Cholesterol", "\(Int(cholesterol))mg", .white.opacity(0.7))
-                            }
-                            Spacer()
-                        }
-                    }
-                }
-                .padding(.horizontal, FuelSpacing.md)
-                .padding(.bottom, FuelSpacing.md)
-            }
+            Spacer()
         }
-        .background(.white.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
-    }
-
-    private func microNutrientLabel(_ label: String, _ value: String, _ color: Color) -> some View {
-        VStack(spacing: 2) {
-            Text(value)
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundStyle(color)
-            Text(label)
-                .font(FuelTypography.caption)
-                .foregroundStyle(.white.opacity(0.5))
-        }
-        .frame(maxWidth: .infinity)
+        .padding(12)
+        .background(Color.gray.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 

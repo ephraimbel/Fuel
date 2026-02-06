@@ -12,8 +12,8 @@ struct DashboardView: View {
     @State private var selectedMealType: MealType = .breakfast
     @State private var showingDatePicker = false
     @State private var selectedMeal: Meal?
-    @State private var showingMealDetail = false
     @State private var showingMealHistory = false
+    @State private var showingNutritionDetail = false
 
     var body: some View {
         NavigationStack {
@@ -22,23 +22,29 @@ struct DashboardView: View {
                     // Date navigation
                     dateNavigationBar
 
-                    // Daily progress card
-                    DailyProgressCard(
-                        totalCalories: viewModel.totalCalories,
-                        calorieGoal: viewModel.calorieGoal,
-                        remainingCalories: viewModel.remainingCalories,
-                        calorieProgress: viewModel.calorieProgress,
-                        proteinProgress: viewModel.proteinProgress,
-                        carbsProgress: viewModel.carbsProgress,
-                        fatProgress: viewModel.fatProgress,
-                        protein: viewModel.totalProtein,
-                        carbs: viewModel.totalCarbs,
-                        fat: viewModel.totalFat,
-                        proteinGoal: viewModel.proteinGoal,
-                        carbsGoal: viewModel.carbsGoal,
-                        fatGoal: viewModel.fatGoal,
-                        isOverGoal: viewModel.isOverGoal
-                    )
+                    // Daily progress card (tappable)
+                    Button {
+                        FuelHaptics.shared.tap()
+                        showingNutritionDetail = true
+                    } label: {
+                        DailyProgressCard(
+                            totalCalories: viewModel.totalCalories,
+                            calorieGoal: viewModel.calorieGoal,
+                            remainingCalories: viewModel.remainingCalories,
+                            calorieProgress: viewModel.calorieProgress,
+                            proteinProgress: viewModel.proteinProgress,
+                            carbsProgress: viewModel.carbsProgress,
+                            fatProgress: viewModel.fatProgress,
+                            protein: viewModel.totalProtein,
+                            carbs: viewModel.totalCarbs,
+                            fat: viewModel.totalFat,
+                            proteinGoal: viewModel.proteinGoal,
+                            carbsGoal: viewModel.carbsGoal,
+                            fatGoal: viewModel.fatGoal,
+                            isOverGoal: viewModel.isOverGoal
+                        )
+                    }
+                    .buttonStyle(ScaleButtonStyle())
 
                     // Meals section
                     mealsSection
@@ -47,12 +53,15 @@ struct DashboardView: View {
                 .padding(.bottom, FuelSpacing.screenBottom + 80) // Tab bar space
             }
             .scrollIndicators(.hidden)
-            .background(FuelColors.background)
+            .background(FuelColors.backgroundGradient)
             .refreshable {
                 viewModel.refresh()
             }
             .onAppear {
                 viewModel.setup(with: modelContext)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .demoDataLoaded)) { _ in
+                viewModel.refresh()
             }
             .navigationTitle("Dashboard")
             .navigationBarTitleDisplayMode(.inline)
@@ -92,18 +101,40 @@ struct DashboardView: View {
             )
             .presentationDetents([.medium])
         }
-        .sheet(isPresented: $showingMealDetail) {
-            if let meal = selectedMeal {
-                MealDetailView(meal: meal) {
-                    viewModel.deleteMeal(meal)
-                    showingMealDetail = false
-                }
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
+        .sheet(item: $selectedMeal) { meal in
+            MealDetailView(meal: meal) {
+                viewModel.deleteMeal(meal)
+                selectedMeal = nil
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+            .onDisappear {
+                viewModel.refresh()
             }
         }
         .fullScreenCover(isPresented: $viewModel.showHistoryPaywall) {
             PaywallView(context: .historyLimit)
+        }
+        .sheet(isPresented: $showingNutritionDetail) {
+            DailyNutritionDetailView(
+                date: viewModel.selectedDate,
+                calories: viewModel.totalCalories,
+                calorieGoal: viewModel.calorieGoal,
+                protein: viewModel.totalProtein,
+                proteinGoal: viewModel.proteinGoal,
+                carbs: viewModel.totalCarbs,
+                carbsGoal: viewModel.carbsGoal,
+                fat: viewModel.totalFat,
+                fatGoal: viewModel.fatGoal,
+                fiber: viewModel.totalFiber,
+                sugar: viewModel.totalSugar,
+                sodium: viewModel.totalSodium,
+                saturatedFat: viewModel.totalSaturatedFat,
+                cholesterol: viewModel.totalCholesterol,
+                mealsLogged: viewModel.todaysMeals.count
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
     }
 
@@ -135,9 +166,10 @@ struct DashboardView: View {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(FuelColors.textSecondary)
-                    .frame(width: 36, height: 36)
+                    .frame(width: 38, height: 38)
                     .background(FuelColors.surface)
                     .clipShape(Circle())
+                    .subtleShadow()
             }
 
             Spacer()
@@ -149,7 +181,7 @@ struct DashboardView: View {
             } label: {
                 HStack(spacing: FuelSpacing.xs) {
                     Text(viewModel.formattedDate)
-                        .font(FuelTypography.headline)
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(FuelColors.textPrimary)
 
                     if !viewModel.isToday {
@@ -169,40 +201,39 @@ struct DashboardView: View {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(viewModel.isToday ? FuelColors.textTertiary : FuelColors.textSecondary)
-                    .frame(width: 36, height: 36)
+                    .frame(width: 38, height: 38)
                     .background(FuelColors.surface)
                     .clipShape(Circle())
+                    .subtleShadow()
             }
             .disabled(viewModel.isToday)
         }
         .padding(.top, FuelSpacing.sm)
     }
 
-    // MARK: - Section Header
-
-    private func sectionHeader(title: String, icon: String) -> some View {
-        HStack(spacing: FuelSpacing.xs) {
-            Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(FuelColors.textTertiary)
-
-            Text(title)
-                .font(FuelTypography.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(FuelColors.textTertiary)
-                .textCase(.uppercase)
-                .tracking(0.5)
-
-            Spacer()
-        }
-        .padding(.bottom, FuelSpacing.xs)
-    }
-
-    // MARK: - Meals Section (New Visual Design)
+    // MARK: - Meals Section (Premium Design)
 
     private var mealsSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            sectionHeader(title: "Today's Meals", icon: "fork.knife")
+        VStack(alignment: .leading, spacing: FuelSpacing.sm) {
+            // Section header
+            HStack {
+                Text("Today's Meals")
+                    .font(FuelTypography.headline)
+                    .foregroundStyle(FuelColors.textPrimary)
+
+                Spacer()
+
+                if !viewModel.todaysMeals.isEmpty {
+                    Button {
+                        FuelHaptics.shared.tap()
+                        showingMealHistory = true
+                    } label: {
+                        Text("See all")
+                            .font(FuelTypography.subheadlineMedium)
+                            .foregroundStyle(FuelColors.primary)
+                    }
+                }
+            }
 
             let meals = viewModel.todaysMeals
 
@@ -211,18 +242,32 @@ struct DashboardView: View {
                     appState.showAddMealSheet = true
                 }
             } else {
-                // 2-column grid of meal cards
-                LazyVGrid(
-                    columns: [
-                        GridItem(.flexible(), spacing: FuelSpacing.sm),
-                        GridItem(.flexible(), spacing: FuelSpacing.sm)
-                    ],
-                    spacing: FuelSpacing.sm
-                ) {
-                    ForEach(meals) { meal in
+                // Vertical list of meal cards (like Cal AI)
+                VStack(spacing: FuelSpacing.sm) {
+                    ForEach(meals.prefix(5)) { meal in
                         TodayMealCard(meal: meal) {
+                            FuelHaptics.shared.tap()
                             selectedMeal = meal
-                            showingMealDetail = true
+                        }
+                    }
+
+                    // Show more button if there are more meals
+                    if meals.count > 5 {
+                        Button {
+                            FuelHaptics.shared.tap()
+                            showingMealHistory = true
+                        } label: {
+                            HStack(spacing: FuelSpacing.xs) {
+                                Text("View \(meals.count - 5) more")
+                                    .font(FuelTypography.subheadlineMedium)
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12, weight: .semibold))
+                            }
+                            .foregroundStyle(FuelColors.primary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, FuelSpacing.md)
+                            .background(FuelColors.surface)
+                            .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusMd))
                         }
                     }
                 }

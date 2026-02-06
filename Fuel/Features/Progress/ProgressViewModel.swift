@@ -169,7 +169,7 @@ final class ProgressViewModel {
         let today = Date()
         let startDate = calendar.date(byAdding: .day, value: -getDaysForRange(), to: today)!
 
-        var descriptor = FetchDescriptor<WeightEntry>(
+        let descriptor = FetchDescriptor<WeightEntry>(
             predicate: #Predicate<WeightEntry> { $0.recordedAt >= startDate },
             sortBy: [SortDescriptor(\WeightEntry.recordedAt, order: .forward)]
         )
@@ -212,7 +212,10 @@ final class ProgressViewModel {
             entries.append(CalorieDataPoint(
                 date: date,
                 calories: totals.calories,
-                goal: calorieGoal
+                goal: calorieGoal,
+                protein: totals.protein,
+                carbs: totals.carbs,
+                fat: totals.fat
             ))
 
             if totals.calories > 0 {
@@ -225,18 +228,11 @@ final class ProgressViewModel {
         }
 
         calorieEntries = entries.reversed()
-
-        // Calculate averages (only from days with data)
         if daysWithData > 0 {
             averageCalories = totalCalories / daysWithData
             averageProtein = totalProtein / Double(daysWithData)
             averageCarbs = totalCarbs / Double(daysWithData)
             averageFat = totalFat / Double(daysWithData)
-        } else {
-            averageCalories = 0
-            averageProtein = 0
-            averageCarbs = 0
-            averageFat = 0
         }
 
         totalDaysLogged = daysWithData
@@ -367,6 +363,18 @@ struct CalorieDataPoint: Identifiable {
     let date: Date
     let calories: Int
     let goal: Int
+    let protein: Double
+    let carbs: Double
+    let fat: Double
+
+    init(date: Date, calories: Int, goal: Int, protein: Double = 0, carbs: Double = 0, fat: Double = 0) {
+        self.date = date
+        self.calories = calories
+        self.goal = goal
+        self.protein = protein
+        self.carbs = carbs
+        self.fat = fat
+    }
 
     var isUnderGoal: Bool {
         calories <= goal
@@ -382,6 +390,35 @@ struct CalorieDataPoint: Identifiable {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEE"
         return formatter.string(from: date)
+    }
+
+    // Calculate calories from each macro
+    var proteinCalories: Double {
+        protein * 4.0 // 4 cal per gram of protein
+    }
+
+    var carbsCalories: Double {
+        carbs * 4.0 // 4 cal per gram of carbs
+    }
+
+    var fatCalories: Double {
+        fat * 9.0 // 9 cal per gram of fat
+    }
+
+    // Calculate percentage of total calories from each macro
+    var proteinPercent: Double {
+        guard calories > 0 else { return 0 }
+        return min(proteinCalories / Double(calories), 1.0)
+    }
+
+    var carbsPercent: Double {
+        guard calories > 0 else { return 0 }
+        return min(carbsCalories / Double(calories), 1.0)
+    }
+
+    var fatPercent: Double {
+        guard calories > 0 else { return 0 }
+        return min(fatCalories / Double(calories), 1.0)
     }
 }
 

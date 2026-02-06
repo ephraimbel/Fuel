@@ -200,4 +200,57 @@ extension FuelColors {
         startPoint: .bottom,
         endPoint: .top
     )
+
+    // MARK: - Premium Card Gradients
+
+    /// Hero card gradient - warm subtle tint
+    public static var heroCardGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color(light: Color(hex: "FFFFFF"), dark: Color(hex: "1C1C1E")),
+                Color(light: Color(hex: "FFF8F6"), dark: Color(hex: "1E1A1A"))
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    /// Screen background gradient for depth
+    public static var backgroundGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color(light: Color(hex: "F8F5F3"), dark: Color(hex: "000000")),
+                Color(light: Color(hex: "FAFAFA"), dark: Color(hex: "050505")),
+                Color(light: Color(hex: "F5F3F1"), dark: Color(hex: "000000"))
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+}
+
+// MARK: - Premium Shadow System
+
+extension View {
+    /// Standard card shadow - visible, layered for depth
+    func cardShadow() -> some View {
+        self
+            .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 4)
+            .shadow(color: .black.opacity(0.03), radius: 2, x: 0, y: 1)
+    }
+
+    /// Hero card shadow - stronger, with color tint
+    func heroShadow(color: Color = FuelColors.primary) -> some View {
+        self
+            .shadow(color: .black.opacity(0.08), radius: 20, x: 0, y: 8)
+            .shadow(color: color.opacity(0.12), radius: 16, x: 0, y: 6)
+            .shadow(color: .black.opacity(0.03), radius: 2, x: 0, y: 1)
+    }
+
+    /// Subtle card shadow for secondary elements
+    func subtleShadow() -> some View {
+        self
+            .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
+            .shadow(color: .black.opacity(0.02), radius: 1, x: 0, y: 1)
+    }
 }
