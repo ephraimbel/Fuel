@@ -15,49 +15,48 @@ struct MealDetailView: View {
     @State private var selectedMealType: MealType?
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 0) {
-                    // Hero photo section
-                    heroPhotoSection
+        ScrollView {
+            VStack(spacing: 0) {
+                // Hero photo section (extends to top)
+                heroPhotoSection
 
-                    VStack(spacing: FuelSpacing.sectionSpacing) {
-                        // Meal info header
-                        mealInfoHeader
+                VStack(spacing: FuelSpacing.sectionSpacing) {
+                    // Meal info header
+                    mealInfoHeader
 
-                        // Nutrition section
-                        nutritionSection
+                    // Nutrition section
+                    nutritionSection
 
-                        // Food items list
-                        foodItemsSection
+                    // Food items list
+                    foodItemsSection
 
-                        // Log again button
-                        logAgainButton
+                    // Log again button
+                    logAgainButton
 
-                        // Delete button
-                        deleteButton
-                    }
-                    .padding(.horizontal, FuelSpacing.screenHorizontal)
-                    .padding(.bottom, FuelSpacing.screenBottom)
+                    // Delete button
+                    deleteButton
                 }
+                .padding(.horizontal, FuelSpacing.screenHorizontal)
+                .padding(.bottom, FuelSpacing.screenBottom)
             }
-            .scrollIndicators(.hidden)
-            .background(FuelColors.background)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(FuelColors.textSecondary)
-                            .frame(width: 32, height: 32)
-                            .background(FuelColors.surface)
-                            .clipShape(Circle())
-                    }
-                }
+        }
+        .scrollIndicators(.hidden)
+        .background(FuelColors.background)
+        .ignoresSafeArea(edges: .top)
+        .overlay(alignment: .topLeading) {
+            // Close button overlay
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 32, height: 32)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Circle())
             }
+            .padding(.top, 16)
+            .padding(.leading, FuelSpacing.screenHorizontal)
         }
         .confirmationDialog(
             "Delete Meal",
@@ -437,32 +436,7 @@ struct MealDetailView: View {
     // MARK: - Log Meal Again
 
     private func logMealAgain(to mealType: MealType) {
-        guard let foodItems = meal.foodItems, !foodItems.isEmpty else { return }
-
-        // Create copies of all food items and add to today's meal
-        for item in foodItems {
-            let newFoodItem = FoodItem(
-                name: item.name,
-                servingSize: item.servingSize,
-                servingUnit: item.servingUnit,
-                numberOfServings: item.numberOfServings,
-                calories: item.caloriesPerServing,
-                protein: item.proteinPerServing,
-                carbs: item.carbsPerServing,
-                fat: item.fatPerServing,
-                source: item.source
-            )
-
-            // Copy additional nutrition data
-            newFoodItem.fiberPerServing = item.fiberPerServing
-            newFoodItem.sugarPerServing = item.sugarPerServing
-            newFoodItem.sodiumPerServing = item.sodiumPerServing
-            newFoodItem.brandName = item.brandName
-            newFoodItem.barcode = item.barcode
-
-            MealService.shared.addFoodItem(newFoodItem, to: mealType, date: Date(), in: modelContext)
-        }
-
+        MealService.shared.logMealAgain(meal, to: mealType, in: modelContext)
         FuelHaptics.shared.success()
         dismiss()
     }

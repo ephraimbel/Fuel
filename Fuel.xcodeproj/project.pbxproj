@@ -7,178 +7,145 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		/* App */
-		APP001 /* FuelApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC001; };
-		APP002 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC002; };
-		APP003 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC003; };
-		
-		/* Models */
-		MOD001 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC010; };
-		MOD002 /* Meal.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC011; };
-		MOD003 /* FoodItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC012; };
-		MOD004 /* WeightEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC013; };
-		MOD005 /* Achievement.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC014; };
-		
-		/* UI Theme */
-		UI001 /* FuelColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC020; };
-		UI002 /* FuelTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC021; };
-		UI003 /* FuelSpacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC022; };
-		UI004 /* FuelAnimations.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC023; };
-		B4D10D5C50E04832871B5E97 /* VisualEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = E65DD301E9974BB5B157D25E /* VisualEffects.swift */; };
-		97F8641362B84E44845402B3 /* ParallaxEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = F278A6ED2CE948CBB9A2FBAC /* ParallaxEffects.swift */; };
 		113D38ECA5A7460C81015C28 /* AchievementCelebration.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD38BEBF9FD04EB1B926103D /* AchievementCelebration.swift */; };
-		9D5F226A2CC440DCB07FF012 /* CustomRefreshControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9EC9587DE2B4278A63C8743 /* CustomRefreshControl.swift */; };
-		FF4522D29A1E48939C20B4EF /* AnimatedIcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AFF074C39F04C20BC591CD2 /* AnimatedIcons.swift */; };
 		6CC49E185B2D4CC98A1ECC83 /* StaggeredAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2E49F8B95E9402AB75FB579 /* StaggeredAnimation.swift */; };
 		9478BD6F7F5F42129E7FBE89 /* AnimatedProgressRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB4339A7EAE415F98F113C1 /* AnimatedProgressRing.swift */; };
+		97F8641362B84E44845402B3 /* ParallaxEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = F278A6ED2CE948CBB9A2FBAC /* ParallaxEffects.swift */; };
+		9D5F226A2CC440DCB07FF012 /* CustomRefreshControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9EC9587DE2B4278A63C8743 /* CustomRefreshControl.swift */; };
+		A5E2489E7129AFA919A7742C /* DailyNutritionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BCC5AD50E338ED22905D27B /* DailyNutritionDetailView.swift */; };
+		3F7A1BC9D42E8A60F5109E7D /* PreviousMealsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D64E2A91B703F5A2E8491C /* PreviousMealsView.swift */; };
+		APP001 /* FuelApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC001 /* FuelApp.swift */; };
+		APP002 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC002 /* MainTabView.swift */; };
+		APP003 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC003 /* RootView.swift */; };
+		B4D10D5C50E04832871B5E97 /* VisualEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = E65DD301E9974BB5B157D25E /* VisualEffects.swift */; };
+		BC001 /* BarcodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC090 /* BarcodeScannerView.swift */; };
+		BC002 /* BarcodeScannerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC091 /* BarcodeScannerViewModel.swift */; };
+		BC003 /* ScannedProductSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC092 /* ScannedProductSheet.swift */; };
+		BC004 /* ManualBarcodeEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC093 /* ManualBarcodeEntryView.swift */; };
 		BF8C88FDCB444E699DCBAF7E /* AnimatedNumber.swift in Sources */ = {isa = PBXBuildFile; fileRef = D68F04ABB46E4D7DBBEE878D /* AnimatedNumber.swift */; };
-		UI005 /* FuelHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC024; };
-		
-		/* UI Components */
-		UC001 /* FuelButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC030; };
-		UC002 /* FuelCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC031; };
-		UC003 /* FuelTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC032; };
-		UC004 /* FuelSearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC033; };
-		UC005 /* FuelNavigationBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC034; };
-		UC006 /* FuelSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC035; };
-		UC007 /* CalorieRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC036; };
-		UC008 /* MacroProgressBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC037; };
-		UC009 /* FuelToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC038; };
-		UC010 /* EmptyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC039; };
-		UC011 /* SkeletonLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC040; };
-		UC012 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC041; };
-		
-		/* Config */
-		CFG001 /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC200; };
-
-		/* Services */
-		SV001 /* AIVisionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC050; };
-		SV002 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC051; };
-		SV003 /* SubscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC052; };
-		SV009 /* FeatureGateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC058; };
-		SUB001 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC059; };
-		SUB002 /* PaywallContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC210; };
-		SV004 /* FoodDatabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC053; };
-		SV005 /* AnalyticsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC054; };
-		SV006 /* AnalyticsExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC055; };
-		SV007 /* AnalyticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC056; };
-		SV008 /* MealService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC057; };
-		
-		/* Onboarding */
-		ON001 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC060; };
-		ON002 /* OnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC061; };
-		ON003 /* OnboardingScreenLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC062; };
-		ON004 /* WelcomeScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC063; };
-		ON005 /* GoalSelectionScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC064; };
-		ON006 /* GenderSelectionScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC065; };
-		ON007 /* AgeInputScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC066; };
-		ON008 /* HeightInputScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC067; };
-		ON009 /* CurrentWeightScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC068; };
-		ON010 /* TargetWeightScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC069; };
-		ON011 /* ActivityLevelScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC070; };
-		ON012 /* WorkoutFrequencyScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC071; };
-		ON013 /* DietPreferenceScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC072; };
-		ON014 /* CalculatingScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC073; };
-		ON015 /* YourPlanScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC074; };
-		ON016 /* NotificationsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC075; };
-		ON017 /* SignInScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC076; };
-		ON018 /* PremiumTrialScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC077; };
-		ON019 /* AllSetScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC078; };
-		
-		/* Camera */
-		CM001 /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC080; };
-		CM002 /* CameraViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC081; };
-		CM003 /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC082; };
-		CM004 /* PhotoReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC083; };
-		CM005 /* PhotoPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC084; };
-		CM006 /* FoodScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC085; };
-		
-		/* Barcode */
-		BC001 /* BarcodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC090; };
-		BC002 /* BarcodeScannerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC091; };
-		BC003 /* ScannedProductSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC092; };
-		BC004 /* ManualBarcodeEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC093; };
-		
-		/* Food Search */
-		FS005 /* CreateCustomFoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC104; };
-		FS006 /* QuickAddView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC105; };
-		
-		/* Dashboard */
-		DB001 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC110; };
-		DB002 /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC111; };
-		DB003 /* DailyProgressCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC112; };
-		DB004 /* StreakCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC113; };
-		DB005 /* MealCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC114; };
-		DB006 /* MealDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC115; };
-		DB007 /* TodayMealCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC116; };
-
-		/* MealHistory */
-		MH001 /* MealHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC160; };
-		MH002 /* MealHistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC161; };
-		
-		/* Progress */
-		PR001 /* ProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC120; };
-		PR002 /* ProgressViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC121; };
-		PR003 /* WeightChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC122; };
-		PR004 /* CalorieChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC123; };
-		PR005 /* WeeklyOverviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC124; };
-		PR006 /* AchievementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC125; };
-		
-		/* Recipe */
-		RC001 /* RecipeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC130; };
-		RC002 /* RecipeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC131; };
-		RC003 /* RecipeListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC132; };
-		RC004 /* CreateRecipeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC133; };
-		RC005 /* RecipeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC134; };
-		RC006 /* AddIngredientSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC135; };
-		
-		/* Settings */
-		ST001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC140; };
-		ST002 /* ProfileSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC141; };
-		ST003 /* GoalSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC142; };
-		ST004 /* PersonalInfoSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC143; };
-		ST005 /* NotificationSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC144; };
-		ST006 /* UnitsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC145; };
-		ST007 /* AppearanceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC146; };
-		ST008 /* HapticsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC147; };
-		ST009 /* SubscriptionSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC148; };
-		ST010 /* PrivacySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC149; };
-		ST011 /* DataExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC150; };
-		ST012 /* HelpCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC151; };
-		ST013 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC152; };
+		CFG001 /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC200 /* Secrets.swift */; };
+		CM001 /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC080 /* CameraView.swift */; };
+		CM002 /* CameraViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC081 /* CameraViewModel.swift */; };
+		CM003 /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC082 /* CameraPreviewView.swift */; };
+		CM004 /* PhotoReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC083 /* PhotoReviewView.swift */; };
+		CM005 /* PhotoPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC084 /* PhotoPickerView.swift */; };
+		CM006 /* FoodScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC085 /* FoodScannerView.swift */; };
+		DB001 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC110 /* DashboardView.swift */; };
+		DB002 /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC111 /* DashboardViewModel.swift */; };
+		DB003 /* DailyProgressCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC112 /* DailyProgressCard.swift */; };
+		DB004 /* StreakCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC113 /* StreakCard.swift */; };
+		DB005 /* MealCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC114 /* MealCard.swift */; };
+		DB006 /* MealDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC115 /* MealDetailView.swift */; };
+		DB007 /* TodayMealCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC116 /* TodayMealCard.swift */; };
+		FF4522D29A1E48939C20B4EF /* AnimatedIcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AFF074C39F04C20BC591CD2 /* AnimatedIcons.swift */; };
+		FS005 /* CreateCustomFoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC104 /* CreateCustomFoodView.swift */; };
+		FS006 /* QuickAddView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC105 /* QuickAddView.swift */; };
+		MH001 /* MealHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC160 /* MealHistoryView.swift */; };
+		MH002 /* MealHistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC161 /* MealHistoryViewModel.swift */; };
+		MOD001 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC010 /* User.swift */; };
+		MOD002 /* Meal.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC011 /* Meal.swift */; };
+		MOD003 /* FoodItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC012 /* FoodItem.swift */; };
+		MOD004 /* WeightEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC013 /* WeightEntry.swift */; };
+		MOD005 /* Achievement.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC014 /* Achievement.swift */; };
+		ON001 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC060 /* OnboardingView.swift */; };
+		ON002 /* OnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC061 /* OnboardingViewModel.swift */; };
+		ON003 /* OnboardingScreenLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC062 /* OnboardingScreenLayout.swift */; };
+		ON004 /* WelcomeScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC063 /* WelcomeScreen.swift */; };
+		ON005 /* GoalSelectionScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC064 /* GoalSelectionScreen.swift */; };
+		ON006 /* GenderSelectionScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC065 /* GenderSelectionScreen.swift */; };
+		ON007 /* AgeInputScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC066 /* AgeInputScreen.swift */; };
+		ON008 /* HeightInputScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC067 /* HeightInputScreen.swift */; };
+		ON009 /* CurrentWeightScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC068 /* CurrentWeightScreen.swift */; };
+		ON010 /* TargetWeightScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC069 /* TargetWeightScreen.swift */; };
+		ON011 /* ActivityLevelScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC070 /* ActivityLevelScreen.swift */; };
+		ON012 /* WorkoutFrequencyScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC071 /* WorkoutFrequencyScreen.swift */; };
+		ON013 /* DietPreferenceScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC072 /* DietPreferenceScreen.swift */; };
+		ON014 /* CalculatingScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC073 /* CalculatingScreen.swift */; };
+		ON015 /* YourPlanScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC074 /* YourPlanScreen.swift */; };
+		ON016 /* NotificationsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC075 /* NotificationsScreen.swift */; };
+		ON017 /* SignInScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC076 /* SignInScreen.swift */; };
+		ON018 /* PremiumTrialScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC077 /* PremiumTrialScreen.swift */; };
+		ON019 /* AllSetScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC078 /* AllSetScreen.swift */; };
+		PR001 /* ProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC120 /* ProgressView.swift */; };
+		PR002 /* ProgressViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC121 /* ProgressViewModel.swift */; };
+		PR003 /* WeightChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC122 /* WeightChartView.swift */; };
+		PR004 /* CalorieChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC123 /* CalorieChartView.swift */; };
+		PR005 /* WeeklyOverviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC124 /* WeeklyOverviewCard.swift */; };
+		PR006 /* AchievementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC125 /* AchievementsView.swift */; };
+		RC001 /* RecipeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC130 /* RecipeModels.swift */; };
+		RC002 /* RecipeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC131 /* RecipeViewModel.swift */; };
+		RC003 /* RecipeListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC132 /* RecipeListView.swift */; };
+		RC004 /* CreateRecipeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC133 /* CreateRecipeView.swift */; };
+		RC005 /* RecipeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC134 /* RecipeDetailView.swift */; };
+		RC006 /* AddIngredientSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC135 /* AddIngredientSheet.swift */; };
+		ST001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC140 /* SettingsView.swift */; };
+		ST002 /* ProfileSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC141 /* ProfileSettingsView.swift */; };
+		ST003 /* GoalSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC142 /* GoalSettingsView.swift */; };
+		ST004 /* PersonalInfoSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC143 /* PersonalInfoSettingsView.swift */; };
+		ST005 /* NotificationSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC144 /* NotificationSettingsView.swift */; };
+		ST006 /* UnitsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC145 /* UnitsSettingsView.swift */; };
+		ST007 /* AppearanceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC146 /* AppearanceSettingsView.swift */; };
+		ST008 /* HapticsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC147 /* HapticsSettingsView.swift */; };
+		ST009 /* SubscriptionSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC148 /* SubscriptionSettingsView.swift */; };
+		ST010 /* PrivacySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC149 /* PrivacySettingsView.swift */; };
+		ST011 /* DataExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC150 /* DataExportView.swift */; };
+		ST012 /* HelpCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC151 /* HelpCenterView.swift */; };
+		ST013 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC152 /* AboutView.swift */; };
+		SUB001 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC059 /* PaywallView.swift */; };
+		SUB002 /* PaywallContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC210 /* PaywallContext.swift */; };
+		SV001 /* AIVisionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC050 /* AIVisionService.swift */; };
+		SV002 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC051 /* AuthService.swift */; };
+		SV003 /* SubscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC052 /* SubscriptionService.swift */; };
+		SV004 /* FoodDatabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC053 /* FoodDatabaseService.swift */; };
+		SV005 /* AnalyticsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC054 /* AnalyticsService.swift */; };
+		SV006 /* AnalyticsExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC055 /* AnalyticsExtensions.swift */; };
+		SV007 /* AnalyticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC056 /* AnalyticsManager.swift */; };
+		SV008 /* MealService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC057 /* MealService.swift */; };
+		SV009 /* FeatureGateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC058 /* FeatureGateService.swift */; };
+		UC001 /* FuelButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC030 /* FuelButton.swift */; };
+		UC002 /* FuelCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC031 /* FuelCard.swift */; };
+		UC003 /* FuelTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC032 /* FuelTextField.swift */; };
+		UC004 /* FuelSearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC033 /* FuelSearchBar.swift */; };
+		UC005 /* FuelNavigationBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC034 /* FuelNavigationBar.swift */; };
+		UC006 /* FuelSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC035 /* FuelSheet.swift */; };
+		UC007 /* CalorieRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC036 /* CalorieRing.swift */; };
+		UC008 /* MacroProgressBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC037 /* MacroProgressBar.swift */; };
+		UC009 /* FuelToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC038 /* FuelToast.swift */; };
+		UC010 /* EmptyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC039 /* EmptyState.swift */; };
+		UC011 /* SkeletonLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC040 /* SkeletonLoader.swift */; };
+		UC012 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC041 /* ConfettiView.swift */; };
+		UI001 /* FuelColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC020 /* FuelColors.swift */; };
+		UI002 /* FuelTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC021 /* FuelTypography.swift */; };
+		UI003 /* FuelSpacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC022 /* FuelSpacing.swift */; };
+		UI004 /* FuelAnimations.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC023 /* FuelAnimations.swift */; };
+		UI005 /* FuelHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC024 /* FuelHaptics.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		5AFF074C39F04C20BC591CD2 /* AnimatedIcons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedIcons.swift; sourceTree = "<group>"; };
+		9BCC5AD50E338ED22905D27B /* DailyNutritionDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DailyNutritionDetailView.swift; sourceTree = "<group>"; };
+		C8D64E2A91B703F5A2E8491C /* PreviousMealsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviousMealsView.swift; sourceTree = "<group>"; };
+		AD38BEBF9FD04EB1B926103D /* AchievementCelebration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AchievementCelebration.swift; sourceTree = "<group>"; };
+		D68F04ABB46E4D7DBBEE878D /* AnimatedNumber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedNumber.swift; sourceTree = "<group>"; };
+		DBB4339A7EAE415F98F113C1 /* AnimatedProgressRing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedProgressRing.swift; sourceTree = "<group>"; };
+		E65DD301E9974BB5B157D25E /* VisualEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffects.swift; sourceTree = "<group>"; };
+		F278A6ED2CE948CBB9A2FBAC /* ParallaxEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParallaxEffects.swift; sourceTree = "<group>"; };
+		F2E49F8B95E9402AB75FB579 /* StaggeredAnimation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StaggeredAnimation.swift; sourceTree = "<group>"; };
+		F9EC9587DE2B4278A63C8743 /* CustomRefreshControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomRefreshControl.swift; sourceTree = "<group>"; };
 		PRODUCT /* Fuel.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Fuel.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		
-		/* App */
 		SRC001 /* FuelApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelApp.swift; sourceTree = "<group>"; };
 		SRC002 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		SRC003 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
-		
-		/* Models */
 		SRC010 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		SRC011 /* Meal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Meal.swift; sourceTree = "<group>"; };
 		SRC012 /* FoodItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodItem.swift; sourceTree = "<group>"; };
 		SRC013 /* WeightEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightEntry.swift; sourceTree = "<group>"; };
 		SRC014 /* Achievement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Achievement.swift; sourceTree = "<group>"; };
-		
-		/* UI Theme */
 		SRC020 /* FuelColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelColors.swift; sourceTree = "<group>"; };
 		SRC021 /* FuelTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelTypography.swift; sourceTree = "<group>"; };
 		SRC022 /* FuelSpacing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelSpacing.swift; sourceTree = "<group>"; };
 		SRC023 /* FuelAnimations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelAnimations.swift; sourceTree = "<group>"; };
-		E65DD301E9974BB5B157D25E /* VisualEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffects.swift; sourceTree = "<group>"; };
-		F278A6ED2CE948CBB9A2FBAC /* ParallaxEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParallaxEffects.swift; sourceTree = "<group>"; };
-		AD38BEBF9FD04EB1B926103D /* AchievementCelebration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AchievementCelebration.swift; sourceTree = "<group>"; };
-		F9EC9587DE2B4278A63C8743 /* CustomRefreshControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomRefreshControl.swift; sourceTree = "<group>"; };
-		5AFF074C39F04C20BC591CD2 /* AnimatedIcons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedIcons.swift; sourceTree = "<group>"; };
-		F2E49F8B95E9402AB75FB579 /* StaggeredAnimation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StaggeredAnimation.swift; sourceTree = "<group>"; };
-		DBB4339A7EAE415F98F113C1 /* AnimatedProgressRing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedProgressRing.swift; sourceTree = "<group>"; };
-		D68F04ABB46E4D7DBBEE878D /* AnimatedNumber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedNumber.swift; sourceTree = "<group>"; };
 		SRC024 /* FuelHaptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelHaptics.swift; sourceTree = "<group>"; };
-		
-		/* UI Components */
 		SRC030 /* FuelButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelButton.swift; sourceTree = "<group>"; };
 		SRC031 /* FuelCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelCard.swift; sourceTree = "<group>"; };
 		SRC032 /* FuelTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelTextField.swift; sourceTree = "<group>"; };
@@ -191,24 +158,16 @@
 		SRC039 /* EmptyState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyState.swift; sourceTree = "<group>"; };
 		SRC040 /* SkeletonLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonLoader.swift; sourceTree = "<group>"; };
 		SRC041 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
-
-		/* Config */
-		SRC200 /* Secrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Secrets.swift; sourceTree = "<group>"; };
-
-		/* Services */
 		SRC050 /* AIVisionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIVisionService.swift; sourceTree = "<group>"; };
 		SRC051 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		SRC052 /* SubscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionService.swift; sourceTree = "<group>"; };
-		SRC058 /* FeatureGateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureGateService.swift; sourceTree = "<group>"; };
-		SRC059 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
-		SRC210 /* PaywallContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallContext.swift; sourceTree = "<group>"; };
 		SRC053 /* FoodDatabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodDatabaseService.swift; sourceTree = "<group>"; };
 		SRC054 /* AnalyticsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsService.swift; sourceTree = "<group>"; };
 		SRC055 /* AnalyticsExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsExtensions.swift; sourceTree = "<group>"; };
 		SRC056 /* AnalyticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsManager.swift; sourceTree = "<group>"; };
-		
 		SRC057 /* MealService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealService.swift; sourceTree = "<group>"; };
-		/* Onboarding */
+		SRC058 /* FeatureGateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureGateService.swift; sourceTree = "<group>"; };
+		SRC059 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		SRC060 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		SRC061 /* OnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewModel.swift; sourceTree = "<group>"; };
 		SRC062 /* OnboardingScreenLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingScreenLayout.swift; sourceTree = "<group>"; };
@@ -228,26 +187,18 @@
 		SRC076 /* SignInScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInScreen.swift; sourceTree = "<group>"; };
 		SRC077 /* PremiumTrialScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiumTrialScreen.swift; sourceTree = "<group>"; };
 		SRC078 /* AllSetScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllSetScreen.swift; sourceTree = "<group>"; };
-		
-		/* Camera */
 		SRC080 /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
 		SRC081 /* CameraViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraViewModel.swift; sourceTree = "<group>"; };
 		SRC082 /* CameraPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewView.swift; sourceTree = "<group>"; };
 		SRC083 /* PhotoReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoReviewView.swift; sourceTree = "<group>"; };
 		SRC084 /* PhotoPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoPickerView.swift; sourceTree = "<group>"; };
 		SRC085 /* FoodScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodScannerView.swift; sourceTree = "<group>"; };
-		
-		/* Barcode */
 		SRC090 /* BarcodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeScannerView.swift; sourceTree = "<group>"; };
 		SRC091 /* BarcodeScannerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeScannerViewModel.swift; sourceTree = "<group>"; };
 		SRC092 /* ScannedProductSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannedProductSheet.swift; sourceTree = "<group>"; };
 		SRC093 /* ManualBarcodeEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualBarcodeEntryView.swift; sourceTree = "<group>"; };
-		
-		/* Food Search */
 		SRC104 /* CreateCustomFoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateCustomFoodView.swift; sourceTree = "<group>"; };
 		SRC105 /* QuickAddView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAddView.swift; sourceTree = "<group>"; };
-		
-		/* Dashboard */
 		SRC110 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		SRC111 /* DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
 		SRC112 /* DailyProgressCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyProgressCard.swift; sourceTree = "<group>"; };
@@ -255,28 +206,18 @@
 		SRC114 /* MealCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealCard.swift; sourceTree = "<group>"; };
 		SRC115 /* MealDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealDetailView.swift; sourceTree = "<group>"; };
 		SRC116 /* TodayMealCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayMealCard.swift; sourceTree = "<group>"; };
-
-		/* MealHistory */
-		SRC160 /* MealHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealHistoryView.swift; sourceTree = "<group>"; };
-		SRC161 /* MealHistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealHistoryViewModel.swift; sourceTree = "<group>"; };
-		
-		/* Progress */
 		SRC120 /* ProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressView.swift; sourceTree = "<group>"; };
 		SRC121 /* ProgressViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressViewModel.swift; sourceTree = "<group>"; };
 		SRC122 /* WeightChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightChartView.swift; sourceTree = "<group>"; };
 		SRC123 /* CalorieChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalorieChartView.swift; sourceTree = "<group>"; };
 		SRC124 /* WeeklyOverviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyOverviewCard.swift; sourceTree = "<group>"; };
 		SRC125 /* AchievementsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AchievementsView.swift; sourceTree = "<group>"; };
-		
-		/* Recipe */
 		SRC130 /* RecipeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeModels.swift; sourceTree = "<group>"; };
 		SRC131 /* RecipeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeViewModel.swift; sourceTree = "<group>"; };
 		SRC132 /* RecipeListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeListView.swift; sourceTree = "<group>"; };
 		SRC133 /* CreateRecipeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateRecipeView.swift; sourceTree = "<group>"; };
 		SRC134 /* RecipeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeDetailView.swift; sourceTree = "<group>"; };
 		SRC135 /* AddIngredientSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddIngredientSheet.swift; sourceTree = "<group>"; };
-		
-		/* Settings */
 		SRC140 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		SRC141 /* ProfileSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSettingsView.swift; sourceTree = "<group>"; };
 		SRC142 /* GoalSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalSettingsView.swift; sourceTree = "<group>"; };
@@ -290,6 +231,10 @@
 		SRC150 /* DataExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataExportView.swift; sourceTree = "<group>"; };
 		SRC151 /* HelpCenterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpCenterView.swift; sourceTree = "<group>"; };
 		SRC152 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
+		SRC160 /* MealHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealHistoryView.swift; sourceTree = "<group>"; };
+		SRC161 /* MealHistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealHistoryViewModel.swift; sourceTree = "<group>"; };
+		SRC200 /* Secrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Secrets.swift; sourceTree = "<group>"; };
+		SRC210 /* PaywallContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallContext.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -303,92 +248,22 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		ROOT = {
+		AI /* AI */ = {
 			isa = PBXGroup;
 			children = (
-				FUEL /* Fuel */,
-				PRODUCTS /* Products */,
+				SRC050 /* AIVisionService.swift */,
 			);
+			path = AI;
 			sourceTree = "<group>";
 		};
-		PRODUCTS /* Products */ = {
+		ANALYTICS /* Analytics */ = {
 			isa = PBXGroup;
 			children = (
-				PRODUCT /* Fuel.app */,
+				SRC054 /* AnalyticsService.swift */,
+				SRC055 /* AnalyticsExtensions.swift */,
+				SRC056 /* AnalyticsManager.swift */,
 			);
-			name = Products;
-			sourceTree = "<group>";
-		};
-		FUEL /* Fuel */ = {
-			isa = PBXGroup;
-			children = (
-				APP /* App */,
-				CONFIG /* Config */,
-				DATA /* Data */,
-				UI /* UI */,
-				SERVICES /* Services */,
-				FEATURES /* Features */,
-			);
-			path = Fuel;
-			sourceTree = "<group>";
-		};
-		CONFIG /* Config */ = {
-			isa = PBXGroup;
-			children = (
-				SRC200 /* Secrets.swift */,
-			);
-			path = Config;
-			sourceTree = "<group>";
-		};
-		APP /* App */ = {
-			isa = PBXGroup;
-			children = (
-				SRC001 /* FuelApp.swift */,
-				SRC002 /* MainTabView.swift */,
-				SRC003 /* RootView.swift */,
-			);
-			path = App;
-			sourceTree = "<group>";
-		};
-		DATA /* Data */ = {
-			isa = PBXGroup;
-			children = (
-				MODELS /* Models */,
-			);
-			path = Data;
-			sourceTree = "<group>";
-		};
-		MODELS /* Models */ = {
-			isa = PBXGroup;
-			children = (
-				SRC010 /* User.swift */,
-				SRC011 /* Meal.swift */,
-				SRC012 /* FoodItem.swift */,
-				SRC013 /* WeightEntry.swift */,
-				SRC014 /* Achievement.swift */,
-			);
-			path = Models;
-			sourceTree = "<group>";
-		};
-		UI /* UI */ = {
-			isa = PBXGroup;
-			children = (
-				THEME /* Theme */,
-				ANIMATIONS /* Animations */,
-				HAPTICS /* Haptics */,
-				COMPONENTS /* Components */,
-			);
-			path = UI;
-			sourceTree = "<group>";
-		};
-		THEME /* Theme */ = {
-			isa = PBXGroup;
-			children = (
-				SRC020 /* FuelColors.swift */,
-				SRC021 /* FuelTypography.swift */,
-				SRC022 /* FuelSpacing.swift */,
-			);
-			path = Theme;
+			path = Analytics;
 			sourceTree = "<group>";
 		};
 		ANIMATIONS /* Animations */ = {
@@ -407,12 +282,62 @@
 			path = Animations;
 			sourceTree = "<group>";
 		};
-		HAPTICS /* Haptics */ = {
+		APP /* App */ = {
 			isa = PBXGroup;
 			children = (
-				SRC024 /* FuelHaptics.swift */,
+				SRC001 /* FuelApp.swift */,
+				SRC002 /* MainTabView.swift */,
+				SRC003 /* RootView.swift */,
 			);
-			path = Haptics;
+			path = App;
+			sourceTree = "<group>";
+		};
+		AUTH /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				SRC051 /* AuthService.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		BARCODE /* BarcodeScanner */ = {
+			isa = PBXGroup;
+			children = (
+				SRC090 /* BarcodeScannerView.swift */,
+				SRC091 /* BarcodeScannerViewModel.swift */,
+				SRC092 /* ScannedProductSheet.swift */,
+				SRC093 /* ManualBarcodeEntryView.swift */,
+			);
+			path = BarcodeScanner;
+			sourceTree = "<group>";
+		};
+		BUTTONS /* Buttons */ = {
+			isa = PBXGroup;
+			children = (
+				SRC030 /* FuelButton.swift */,
+			);
+			path = Buttons;
+			sourceTree = "<group>";
+		};
+		CAMERA /* Camera */ = {
+			isa = PBXGroup;
+			children = (
+				SRC080 /* CameraView.swift */,
+				SRC081 /* CameraViewModel.swift */,
+				SRC082 /* CameraPreviewView.swift */,
+				SRC083 /* PhotoReviewView.swift */,
+				SRC084 /* PhotoPickerView.swift */,
+				SRC085 /* FoodScannerView.swift */,
+			);
+			path = Camera;
+			sourceTree = "<group>";
+		};
+		CARDS /* Cards */ = {
+			isa = PBXGroup;
+			children = (
+				SRC031 /* FuelCard.swift */,
+			);
+			path = Cards;
 			sourceTree = "<group>";
 		};
 		COMPONENTS /* Components */ = {
@@ -428,120 +353,34 @@
 			path = Components;
 			sourceTree = "<group>";
 		};
-		BUTTONS /* Buttons */ = {
+		CONFIG /* Config */ = {
 			isa = PBXGroup;
 			children = (
-				SRC030 /* FuelButton.swift */,
+				SRC200 /* Secrets.swift */,
 			);
-			path = Buttons;
+			path = Config;
 			sourceTree = "<group>";
 		};
-		CARDS /* Cards */ = {
+		DASHBOARD /* Dashboard */ = {
 			isa = PBXGroup;
 			children = (
-				SRC031 /* FuelCard.swift */,
+				SRC110 /* DashboardView.swift */,
+				SRC111 /* DashboardViewModel.swift */,
+				SRC112 /* DailyProgressCard.swift */,
+				SRC113 /* StreakCard.swift */,
+				SRC114 /* MealCard.swift */,
+				SRC115 /* MealDetailView.swift */,
+				SRC116 /* TodayMealCard.swift */,
+				9BCC5AD50E338ED22905D27B /* DailyNutritionDetailView.swift */,
+				C8D64E2A91B703F5A2E8491C /* PreviousMealsView.swift */,
 			);
-			path = Cards;
+			path = Dashboard;
 			sourceTree = "<group>";
 		};
-		INPUT /* Input */ = {
+		DATA /* Data */ = {
 			isa = PBXGroup;
 			children = (
-				SRC032 /* FuelTextField.swift */,
-				SRC033 /* FuelSearchBar.swift */,
-			);
-			path = Input;
-			sourceTree = "<group>";
-		};
-		NAVIGATION /* Navigation */ = {
-			isa = PBXGroup;
-			children = (
-				SRC034 /* FuelNavigationBar.swift */,
-				SRC035 /* FuelSheet.swift */,
-			);
-			path = Navigation;
-			sourceTree = "<group>";
-		};
-		PROGRESS /* Progress */ = {
-			isa = PBXGroup;
-			children = (
-				SRC036 /* CalorieRing.swift */,
-				SRC037 /* MacroProgressBar.swift */,
-			);
-			path = Progress;
-			sourceTree = "<group>";
-		};
-		FEEDBACK /* Feedback */ = {
-			isa = PBXGroup;
-			children = (
-				SRC038 /* FuelToast.swift */,
-				SRC039 /* EmptyState.swift */,
-				SRC040 /* SkeletonLoader.swift */,
-				SRC041 /* ConfettiView.swift */,
-			);
-			path = Feedback;
-			sourceTree = "<group>";
-		};
-		SERVICES /* Services */ = {
-			isa = PBXGroup;
-			children = (
-				AI /* AI */,
-				AUTH /* Auth */,
-				SUBSCRIPTION /* Subscription */,
-				FOODDB /* FoodDatabase */,
-				ANALYTICS /* Analytics */,
-				SVCDATA /* Data */,
-			);
-			path = Services;
-			sourceTree = "<group>";
-		};
-		AI /* AI */ = {
-			isa = PBXGroup;
-			children = (
-				SRC050 /* AIVisionService.swift */,
-			);
-			path = AI;
-			sourceTree = "<group>";
-		};
-		AUTH /* Auth */ = {
-			isa = PBXGroup;
-			children = (
-				SRC051 /* AuthService.swift */,
-			);
-			path = Auth;
-			sourceTree = "<group>";
-		};
-		SUBSCRIPTION /* Subscription */ = {
-			isa = PBXGroup;
-			children = (
-				SRC052 /* SubscriptionService.swift */,
-				SRC058 /* FeatureGateService.swift */,
-			);
-			path = Subscription;
-			sourceTree = "<group>";
-		};
-		FOODDB /* FoodDatabase */ = {
-			isa = PBXGroup;
-			children = (
-				SRC053 /* FoodDatabaseService.swift */,
-			);
-			path = FoodDatabase;
-			sourceTree = "<group>";
-		};
-		ANALYTICS /* Analytics */ = {
-			isa = PBXGroup;
-			children = (
-				SRC054 /* AnalyticsService.swift */,
-				SRC055 /* AnalyticsExtensions.swift */,
-				SRC056 /* AnalyticsManager.swift */,
-			);
-			path = Analytics;
-			sourceTree = "<group>";
-		};
-		SVCDATA /* Data */ = {
-			isa = PBXGroup;
-			children = (
-				SRC057 /* MealService.swift */,
+				MODELS /* Models */,
 			);
 			path = Data;
 			sourceTree = "<group>";
@@ -563,6 +402,64 @@
 			path = Features;
 			sourceTree = "<group>";
 		};
+		FEEDBACK /* Feedback */ = {
+			isa = PBXGroup;
+			children = (
+				SRC038 /* FuelToast.swift */,
+				SRC039 /* EmptyState.swift */,
+				SRC040 /* SkeletonLoader.swift */,
+				SRC041 /* ConfettiView.swift */,
+			);
+			path = Feedback;
+			sourceTree = "<group>";
+		};
+		FOODDB /* FoodDatabase */ = {
+			isa = PBXGroup;
+			children = (
+				SRC053 /* FoodDatabaseService.swift */,
+			);
+			path = FoodDatabase;
+			sourceTree = "<group>";
+		};
+		FOODSEARCH /* FoodSearch */ = {
+			isa = PBXGroup;
+			children = (
+				SRC104 /* CreateCustomFoodView.swift */,
+				SRC105 /* QuickAddView.swift */,
+			);
+			path = FoodSearch;
+			sourceTree = "<group>";
+		};
+		FUEL /* Fuel */ = {
+			isa = PBXGroup;
+			children = (
+				APP /* App */,
+				CONFIG /* Config */,
+				DATA /* Data */,
+				UI /* UI */,
+				SERVICES /* Services */,
+				FEATURES /* Features */,
+			);
+			path = Fuel;
+			sourceTree = "<group>";
+		};
+		HAPTICS /* Haptics */ = {
+			isa = PBXGroup;
+			children = (
+				SRC024 /* FuelHaptics.swift */,
+			);
+			path = Haptics;
+			sourceTree = "<group>";
+		};
+		INPUT /* Input */ = {
+			isa = PBXGroup;
+			children = (
+				SRC032 /* FuelTextField.swift */,
+				SRC033 /* FuelSearchBar.swift */,
+			);
+			path = Input;
+			sourceTree = "<group>";
+		};
 		MEALHISTORY /* MealHistory */ = {
 			isa = PBXGroup;
 			children = (
@@ -570,6 +467,35 @@
 				SRC161 /* MealHistoryViewModel.swift */,
 			);
 			path = MealHistory;
+			sourceTree = "<group>";
+		};
+		MODELS /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				SRC010 /* User.swift */,
+				SRC011 /* Meal.swift */,
+				SRC012 /* FoodItem.swift */,
+				SRC013 /* WeightEntry.swift */,
+				SRC014 /* Achievement.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		NAVIGATION /* Navigation */ = {
+			isa = PBXGroup;
+			children = (
+				SRC034 /* FuelNavigationBar.swift */,
+				SRC035 /* FuelSheet.swift */,
+			);
+			path = Navigation;
+			sourceTree = "<group>";
+		};
+		ONBCOMPONENTS /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				SRC062 /* OnboardingScreenLayout.swift */,
+			);
+			path = Components;
 			sourceTree = "<group>";
 		};
 		ONBOARDING /* Onboarding */ = {
@@ -581,14 +507,6 @@
 				ONBSCREENS /* Screens */,
 			);
 			path = Onboarding;
-			sourceTree = "<group>";
-		};
-		ONBCOMPONENTS /* Components */ = {
-			isa = PBXGroup;
-			children = (
-				SRC062 /* OnboardingScreenLayout.swift */,
-			);
-			path = Components;
 			sourceTree = "<group>";
 		};
 		ONBSCREENS /* Screens */ = {
@@ -614,51 +532,21 @@
 			path = Screens;
 			sourceTree = "<group>";
 		};
-		CAMERA /* Camera */ = {
+		PRODUCTS /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				SRC080 /* CameraView.swift */,
-				SRC081 /* CameraViewModel.swift */,
-				SRC082 /* CameraPreviewView.swift */,
-				SRC083 /* PhotoReviewView.swift */,
-				SRC084 /* PhotoPickerView.swift */,
-				SRC085 /* FoodScannerView.swift */,
+				PRODUCT /* Fuel.app */,
 			);
-			path = Camera;
+			name = Products;
 			sourceTree = "<group>";
 		};
-		BARCODE /* BarcodeScanner */ = {
+		PROGRESS /* Progress */ = {
 			isa = PBXGroup;
 			children = (
-				SRC090 /* BarcodeScannerView.swift */,
-				SRC091 /* BarcodeScannerViewModel.swift */,
-				SRC092 /* ScannedProductSheet.swift */,
-				SRC093 /* ManualBarcodeEntryView.swift */,
+				SRC036 /* CalorieRing.swift */,
+				SRC037 /* MacroProgressBar.swift */,
 			);
-			path = BarcodeScanner;
-			sourceTree = "<group>";
-		};
-		FOODSEARCH /* FoodSearch */ = {
-			isa = PBXGroup;
-			children = (
-				SRC104 /* CreateCustomFoodView.swift */,
-				SRC105 /* QuickAddView.swift */,
-			);
-			path = FoodSearch;
-			sourceTree = "<group>";
-		};
-		DASHBOARD /* Dashboard */ = {
-			isa = PBXGroup;
-			children = (
-				SRC110 /* DashboardView.swift */,
-				SRC111 /* DashboardViewModel.swift */,
-				SRC112 /* DailyProgressCard.swift */,
-				SRC113 /* StreakCard.swift */,
-				SRC114 /* MealCard.swift */,
-				SRC115 /* MealDetailView.swift */,
-				SRC116 /* TodayMealCard.swift */,
-			);
-			path = Dashboard;
+			path = Progress;
 			sourceTree = "<group>";
 		};
 		PROGRESSFEAT /* Progress */ = {
@@ -687,6 +575,27 @@
 			path = Recipe;
 			sourceTree = "<group>";
 		};
+		ROOT = {
+			isa = PBXGroup;
+			children = (
+				FUEL /* Fuel */,
+				PRODUCTS /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		SERVICES /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				AI /* AI */,
+				AUTH /* Auth */,
+				SUBSCRIPTION /* Subscription */,
+				FOODDB /* FoodDatabase */,
+				ANALYTICS /* Analytics */,
+				SVCDATA /* Data */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
 		SETTINGS /* Settings */ = {
 			isa = PBXGroup;
 			children = (
@@ -707,6 +616,15 @@
 			path = Settings;
 			sourceTree = "<group>";
 		};
+		SUBSCRIPTION /* Subscription */ = {
+			isa = PBXGroup;
+			children = (
+				SRC052 /* SubscriptionService.swift */,
+				SRC058 /* FeatureGateService.swift */,
+			);
+			path = Subscription;
+			sourceTree = "<group>";
+		};
 		SUBSCRIPTIONFEAT /* Subscription */ = {
 			isa = PBXGroup;
 			children = (
@@ -716,12 +634,41 @@
 			path = Subscription;
 			sourceTree = "<group>";
 		};
+		SVCDATA /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				SRC057 /* MealService.swift */,
+			);
+			path = Data;
+			sourceTree = "<group>";
+		};
+		THEME /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				SRC020 /* FuelColors.swift */,
+				SRC021 /* FuelTypography.swift */,
+				SRC022 /* FuelSpacing.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		UI /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				THEME /* Theme */,
+				ANIMATIONS /* Animations */,
+				HAPTICS /* Haptics */,
+				COMPONENTS /* Components */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
 		TARGET /* Fuel */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = TARGETCONFIGS;
+			buildConfigurationList = TARGETCONFIGS /* Build configuration list for PBXNativeTarget "Fuel" */;
 			buildPhases = (
 				SOURCES /* Sources */,
 				FRAMEWORKS /* Frameworks */,
@@ -751,7 +698,7 @@
 					};
 				};
 			};
-			buildConfigurationList = PROJECTCONFIGS;
+			buildConfigurationList = PROJECTCONFIGS /* Build configuration list for PBXProject "Fuel" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -894,6 +841,8 @@
 				ST011 /* DataExportView.swift in Sources */,
 				ST012 /* HelpCenterView.swift in Sources */,
 				ST013 /* AboutView.swift in Sources */,
+				A5E2489E7129AFA919A7742C /* DailyNutritionDetailView.swift in Sources */,
+				3F7A1BC9D42E8A60F5109E7D /* PreviousMealsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

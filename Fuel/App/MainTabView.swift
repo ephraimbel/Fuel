@@ -21,6 +21,7 @@ struct MainTabView: View {
 
     @State private var fullScreenDestination: FullScreenDestination?
     @State private var showQuickAdd = false
+    @State private var showPreviousMeals = false
     @State private var selectedMealType: MealType = .suggested()
 
     private var showAddSheet: Binding<Bool> {
@@ -34,24 +35,23 @@ struct MainTabView: View {
         @Bindable var state = appState
 
         ZStack(alignment: .bottom) {
-            // Tab content with smooth page transitions
-            TabView(selection: $state.selectedTab) {
-                DashboardView()
-                    .tag(Tab.home)
-
-                NavigationStack {
-                    MealHistoryView()
+            // Tab content - direct view switching for instant, glitch-free transitions
+            Group {
+                switch state.selectedTab {
+                case .home:
+                    DashboardView()
+                case .history:
+                    NavigationStack {
+                        MealHistoryView()
+                    }
+                case .progress:
+                    ProgressScreen()
+                case .profile:
+                    SettingsView()
                 }
-                .tag(Tab.history)
-
-                ProgressScreen()
-                    .tag(Tab.progress)
-
-                SettingsView()
-                    .tag(Tab.profile)
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .animation(.easeInOut(duration: 0.3), value: state.selectedTab)
+            .transition(.opacity)
+            .animation(.easeInOut(duration: 0.15), value: state.selectedTab)
 
             // Custom tab bar
             customTabBar
@@ -63,6 +63,12 @@ struct MainTabView: View {
                     appState.showAddMealSheet = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         fullScreenDestination = .foodScanner
+                    }
+                },
+                onPreviousMeals: {
+                    appState.showAddMealSheet = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showPreviousMeals = true
                     }
                 },
                 onQuickAdd: {
@@ -78,7 +84,7 @@ struct MainTabView: View {
                     }
                 }
             )
-            .presentationDetents([.height(280)])
+            .presentationDetents([.height(360)])
             .presentationCornerRadius(FuelSpacing.radiusXxl)
         }
         .fullScreenCover(item: $fullScreenDestination) { destination in
@@ -112,6 +118,10 @@ struct MainTabView: View {
                 FuelHaptics.shared.success()
             }
             .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showPreviousMeals) {
+            PreviousMealsView()
+                .presentationDetents([.medium, .large])
         }
     }
 
@@ -199,10 +209,12 @@ struct MainTabView: View {
 
 // MARK: - Scale Button Style
 
-private struct ScaleButtonStyle: ButtonStyle {
+struct ScaleButtonStyle: ButtonStyle {
+    var scale: Double = 0.96
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.94 : 1.0)
+            .scaleEffect(configuration.isPressed ? scale : 1.0)
             .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
     }
 }
@@ -213,6 +225,7 @@ struct AddMealSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     let onScanMeal: () -> Void
+    let onPreviousMeals: () -> Void
     let onQuickAdd: () -> Void
     let onCreateFood: () -> Void
 
@@ -240,6 +253,16 @@ struct AddMealSheet: View {
                     subtitle: "AI camera, barcode, or photo"
                 ) {
                     onScanMeal()
+                }
+
+                // Previous Meals
+                primaryOption(
+                    icon: "clock.arrow.circlepath",
+                    title: "Previous Meals",
+                    subtitle: "Re-log a meal you've had before",
+                    accentColor: Color(.systemGreen)
+                ) {
+                    onPreviousMeals()
                 }
 
                 // Secondary actions
@@ -273,9 +296,11 @@ struct AddMealSheet: View {
         icon: String,
         title: String,
         subtitle: String,
+        accentColor: Color? = nil,
         action: @escaping () -> Void
     ) -> some View {
-        Button {
+        let color = accentColor ?? FuelColors.primary
+        return Button {
             FuelHaptics.shared.tap()
             action()
         } label: {
@@ -286,7 +311,7 @@ struct AddMealSheet: View {
                     .frame(width: 48, height: 48)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(FuelColors.primary)
+                            .fill(color)
                     )
 
                 VStack(alignment: .leading, spacing: 3) {
@@ -303,14 +328,14 @@ struct AddMealSheet: View {
 
                 Image(systemName: "arrow.right")
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(FuelColors.primary)
+                    .foregroundStyle(color)
             }
             .padding(FuelSpacing.md)
-            .background(FuelColors.primary.opacity(0.08))
+            .background(color.opacity(0.08))
             .clipShape(RoundedRectangle(cornerRadius: FuelSpacing.radiusLg))
             .overlay(
                 RoundedRectangle(cornerRadius: FuelSpacing.radiusLg)
-                    .stroke(FuelColors.primary.opacity(0.15), lineWidth: 1)
+                    .stroke(color.opacity(0.15), lineWidth: 1)
             )
         }
         .buttonStyle(ScaleButtonStyle())

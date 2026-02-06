@@ -168,19 +168,40 @@ final class MealService {
         var totalProtein: Double = 0
         var totalCarbs: Double = 0
         var totalFat: Double = 0
+        var totalFiber: Double = 0
+        var totalSugar: Double = 0
+        var totalSodium: Double = 0
+        var totalSaturatedFat: Double = 0
+        var totalCholesterol: Double = 0
 
         for meal in meals {
             totalCalories += meal.totalCalories
             totalProtein += meal.totalProtein
             totalCarbs += meal.totalCarbs
             totalFat += meal.totalFat
+
+            // Aggregate micronutrients from food items
+            if let items = meal.foodItems {
+                for item in items {
+                    totalFiber += item.fiber ?? 0
+                    totalSugar += item.sugar ?? 0
+                    totalSodium += item.sodium ?? 0
+                    totalSaturatedFat += (item.saturatedFatPerServing ?? 0) * item.numberOfServings
+                    totalCholesterol += (item.cholesterolPerServing ?? 0) * item.numberOfServings
+                }
+            }
         }
 
         return DailyNutritionTotals(
             calories: totalCalories,
             protein: totalProtein,
             carbs: totalCarbs,
-            fat: totalFat
+            fat: totalFat,
+            fiber: totalFiber,
+            sugar: totalSugar,
+            sodium: totalSodium,
+            saturatedFat: totalSaturatedFat,
+            cholesterol: totalCholesterol
         )
     }
 
@@ -194,6 +215,90 @@ final class MealService {
         }
 
         return grouped
+    }
+
+    // MARK: - Previous Meals
+
+    /// Get recent meals with food items from the last N days
+    func getRecentMeals(days: Int = 7, limit: Int = 20, in context: ModelContext) -> [Meal] {
+        let calendar = Calendar.current
+        guard let startDate = calendar.date(byAdding: .day, value: -days, to: calendar.startOfDay(for: Date())) else {
+            logger.error("Failed to calculate start date for recent meals")
+            return []
+        }
+
+        let predicate = #Predicate<Meal> { meal in
+            meal.loggedAt >= startDate && !meal.isDeleted && meal.totalCalories > 0
+        }
+
+        var descriptor = FetchDescriptor<Meal>(
+            predicate: predicate,
+            sortBy: [SortDescriptor(\.loggedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = limit
+
+        do {
+            let meals = try context.fetch(descriptor)
+            return meals.filter { ($0.foodItems?.isEmpty == false) }
+        } catch {
+            logger.error("Failed to fetch recent meals: \(error.localizedDescription)")
+            return []
+        }
+    }
+
+    /// Get frequently eaten meals (meals with the same food combination logged 2+ times)
+    func getFrequentMeals(days: Int = 30, limit: Int = 10, in context: ModelContext) -> [Meal] {
+        let calendar = Calendar.current
+        guard let startDate = calendar.date(byAdding: .day, value: -days, to: calendar.startOfDay(for: Date())) else {
+            logger.error("Failed to calculate start date for frequent meals")
+            return []
+        }
+
+        let predicate = #Predicate<Meal> { meal in
+            meal.loggedAt >= startDate && !meal.isDeleted && meal.totalCalories > 0
+        }
+
+        let descriptor = FetchDescriptor<Meal>(
+            predicate: predicate,
+            sortBy: [SortDescriptor(\.loggedAt, order: .reverse)]
+        )
+
+        do {
+            let allMeals = try context.fetch(descriptor)
+                .filter { ($0.foodItems?.isEmpty == false) }
+
+            // Group by fingerprint (sorted lowercase food names joined by |)
+            var groups: [String: [Meal]] = [:]
+            for meal in allMeals {
+                let fingerprint = (meal.foodItems ?? [])
+                    .map { $0.name.lowercased() }
+                    .sorted()
+                    .joined(separator: "|")
+                groups[fingerprint, default: []].append(meal)
+            }
+
+            // Return one representative meal per group where count >= 2, sorted by frequency
+            return groups
+                .filter { $0.value.count >= 2 }
+                .sorted { $0.value.count > $1.value.count }
+                .prefix(limit)
+                .compactMap { $0.value.first }
+        } catch {
+            logger.error("Failed to fetch frequent meals: \(error.localizedDescription)")
+            return []
+        }
+    }
+
+    /// Log a meal again by duplicating its food items to a target meal type and date
+    func logMealAgain(_ sourceMeal: Meal, to mealType: MealType, date: Date = Date(), in context: ModelContext) {
+        guard let foodItems = sourceMeal.foodItems, !foodItems.isEmpty else { return }
+
+        for item in foodItems {
+            let newItem = item.duplicate()
+            addFoodItem(newItem, to: mealType, date: date, in: context)
+        }
+
+        logger.info("Logged meal again: \(foodItems.count) items to \(mealType.rawValue)")
     }
 
     // MARK: - Helper
@@ -215,5 +320,22 @@ struct DailyNutritionTotals {
     let carbs: Double
     let fat: Double
 
-    static let zero = DailyNutritionTotals(calories: 0, protein: 0, carbs: 0, fat: 0)
+    // Micronutrients
+    let fiber: Double
+    let sugar: Double
+    let sodium: Double
+    let saturatedFat: Double
+    let cholesterol: Double
+
+    static let zero = DailyNutritionTotals(
+        calories: 0,
+        protein: 0,
+        carbs: 0,
+        fat: 0,
+        fiber: 0,
+        sugar: 0,
+        sodium: 0,
+        saturatedFat: 0,
+        cholesterol: 0
+    )
 }
